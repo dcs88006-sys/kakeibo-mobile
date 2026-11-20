@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none';">
   <meta name="referrer" content="no-referrer">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563eb">
   <title>セキュア家計簿 Mobile</title>
   <style>
     :root {
@@ -1126,6 +1128,11 @@
           reader.readAsText(f);
         });
       });
+      if ("serviceWorker" in navigator) {
+          window.addEventListener("load", function () {
+            navigator.serviceWorker.register("./sw.js").catch(function () {});
+          });
+        }
     })();
   </script>
 </body>
