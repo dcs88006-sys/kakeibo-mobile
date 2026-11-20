@@ -1,8 +1,10 @@
-const CACHE_NAME = "secure-kakeibo-mobile-v1";
+const CACHE_NAME = "secure-kakeibo-mobile-v2";
 const ASSETS = [
   "./",
   "./index.html",
-  "./manifest.json"
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 self.addEventListener("install", function (event) {
