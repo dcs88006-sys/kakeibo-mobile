@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none';">
+  <meta name="referrer" content="no-referrer">
+  <title>セキュア家計簿 Mobile</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --nav-height: 66px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+      padding-bottom: calc(var(--nav-height) + 24px + env(safe-area-inset-bottom));
+    }
+
+    /* Top Header */
+    .top-bar {
+      position: sticky; top: 0; z-index: 20;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .app-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    .lock-pill {
+      font-size: 10px; font-weight: 700;
+      background: var(--success-light); color: var(--success);
+      border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 999px;
+    }
+    .month-switcher {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: 999px; padding: 2px 6px;
+    }
+    .month-switcher button {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: none; background: var(--surface); font-weight: 800; font-size: 13px;
+    }
+    .month-switcher input[type="month"] {
+      border: none; background: transparent;
+      font-size: 14px; font-weight: 700; color: var(--text);
+      width: 118px; text-align: center;
+    }
+
+    /* Pages */
+    .page { display: none; padding: 14px; max-width: 960px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* Right-aligned container for Entry Form */
+    .input-page-wrap {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .input-card-right {
+      width: 100%;
+      max-width: 560px;
+      margin-left: auto;
+      text-align: right;
+    }
+    .input-card-right .section-title {
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .input-card-right .form-label {
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .input-card-right .form-control {
+      text-align: right;
+    }
+    .input-card-right input[type="date"].form-control {
+      text-align: right;
+    }
+    .input-card-right .quick-row {
+      justify-content: flex-end;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+    .section-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+    /* Form Controls (16px+ prevents iOS Safari auto-zoom) */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;
+    }
+    .req { background: var(--danger-light); color: var(--danger); font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+    .opt { background: var(--surface-alt); color: var(--text-muted); font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+
+    .form-control {
+      width: 100%; min-height: 46px; padding: 10px 12px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+      font-size: 16px; color: var(--text); background: var(--surface);
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+    .quick-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip-btn {
+      min-height: 36px; padding: 6px 12px;
+      border-radius: 999px; border: 1px solid var(--border-strong);
+      background: var(--surface-alt); font-size: 13px; font-weight: 600; color: #1e293b;
+    }
+    .chip-btn:active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+    .cat-box {
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;
+    }
+    .cat-box .form-group:last-child { margin-bottom: 0; }
+
+    .btn {
+      min-height: 46px; padding: 10px 16px;
+      border-radius: var(--radius-sm); font-size: 15px; font-weight: 700;
+      border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); width: 100%; min-height: 52px; font-size: 16px; }
+    .btn-danger { background: var(--danger-light); color: var(--danger); border-color: #fecaca; }
+    .btn-sm { min-height: 34px; padding: 4px 10px; font-size: 12px; }
+
+    /* Sub Tabs in Analytics */
+    .seg-tabs {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      background: #e2e8f0; padding: 3px; border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+    }
+    .seg-btn {
+      min-height: 38px; border: none; background: transparent;
+      border-radius: 8px; font-size: 13px; font-weight: 700; color: #475569;
+    }
+    .seg-btn.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
+    /* Summary Banner */
+    .total-banner {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff; border-radius: var(--radius);
+      padding: 16px; margin-bottom: 14px;
+    }
+    .total-banner .lbl { font-size: 12px; opacity: 0.9; }
+    .total-banner .val { font-size: 28px; font-weight: 800; margin: 2px 0; }
+    .total-banner .sub { font-size: 12px; opacity: 0.9; }
+
+    /* Tree & Rank Items */
+    .acc-item { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; }
+    .acc-head {
+      padding: 12px; background: var(--surface-alt);
+      display: flex; align-items: center; justify-content: space-between; font-weight: 700;
+    }
+    .acc-sub { padding: 10px 12px 10px 24px; border-top: 1px solid var(--border); font-size: 14px; display: flex; justify-content: space-between; background: #fff; }
+    .acc-leaf { padding: 7px 12px 7px 38px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #475569; display: flex; justify-content: space-between; background: #fafcff; }
+
+    .rank-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .rank-row:last-child { border-bottom: none; }
+
+    /* Expense Cards */
+    .exp-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px;
+    }
+    .exp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .exp-name { font-weight: 800; font-size: 15px; }
+    .exp-amt { font-weight: 800; font-size: 16px; color: var(--text); white-space: nowrap; }
+    .exp-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+    .b-store { background: #fef3c7; color: #92400e; }
+    .b-pay { background: #e0e7ff; color: #3730a3; }
+    .b-cat { background: #f1f5f9; color: #334155; }
+    .exp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      z-index: 30;
+    }
+    .nav-btn {
+      border: none; background: transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+    }
+    .nav-btn .ico { font-size: 20px; }
+    .nav-btn.active { color: var(--primary); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 10px 18px;
+      border-radius: 999px; font-size: 13px; font-weight: 700;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .empty { text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <div class="app-title">
+      <span>📱 家計簿 Mobile</span>
+      <span class="lock-pill">🔒 通信ゼロ</span>
+    </div>
+    <div class="month-switcher">
+      <button type="button" id="mPrev">◀</button>
+      <input type="month" id="mCurrent">
+      <button type="button" id="mNext">▶</button>
+    </div>
+  </header>
+
+  <!-- TAB 1: INPUT (Right-aligned) -->
+  <section class="page active" id="page-input">
+    <div class="input-page-wrap">
+      <div class="card input-card-right">
+        <div class="section-title">
+          <button type="button" class="btn btn-sm" id="mCancelEdit" style="display:none;">キャンセル</button>
+          <span id="mFormTitle">📝 購入商品の登録</span>
+        </div>
+        <form id="mExpenseForm" novalidate>
+          <input type="hidden" id="mEditId" value="">
+
+          <div class="form-group">
+            <label class="form-label" for="mDate"><span class="req">必須</span> 購入日</label>
+            <input type="date" id="mDate" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mAmount"><span class="req">必須</span> 金額（円）</label>
+            <input type="number" id="mAmount" class="form-control" inputmode="numeric" min="1" max="100000000" placeholder="0" required>
+            <div class="quick-row" id="mQuickMoney">
+              <button type="button" class="chip-btn" data-add="100">+100</button>
+              <button type="button" class="chip-btn" data-add="500">+500</button>
+              <button type="button" class="chip-btn" data-add="1000">+1,000</button>
+              <button type="button" class="chip-btn" data-add="5000">+5,000</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mItem"><span class="req">必須</span> 購入した商品名</label>
+            <input type="text" id="mItem" class="form-control" maxlength="80" placeholder="例: 食材・日用品など" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mStore"><span class="req">必須</span> 購入先（店舗・サイト等）</label>
+            <input type="text" id="mStore" class="form-control" list="mStoreList" maxlength="60" placeholder="入力または下の候補をタップ" required>
+            <datalist id="mStoreList"></datalist>
+            <div class="quick-row" id="mStoreChips"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mPayment"><span class="req">必須</span> 支払方法</label>
+            <select id="mPayment" class="form-control" required></select>
+          </div>
+
+          <div class="cat-box">
+            <div class="form-group">
+              <label class="form-label" for="mCat1"><span class="req">必須</span> 大分類</label>
+              <select id="mCat1" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mCat2"><span class="req">必須</span> 中分類</label>
+              <select id="mCat2" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mCat3"><span class="req">必須</span> 小分類</label>
+              <select id="mCat3" class="form-control" required></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mMemo"><span class="opt">任意</span> メモ</label>
+            <input type="text" id="mMemo" class="form-control" maxlength="120" placeholder="備考など">
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="mSubmitBtn">＋ 家計簿に登録する</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: ANALYTICS -->
+  <section class="page" id="page-analytics">
+    <div class="total-banner">
+      <div class="lbl" id="mBannerMonth">月間支出合計</div>
+      <div class="val" id="mBannerTotal">¥0</div>
+      <div class="sub" id="mBannerSub">登録件数: 0件</div>
+    </div>
+
+    <div class="seg-tabs" id="mAnalyticsMode">
+      <button type="button" class="seg-btn active" data-mode="tree">🌳 分類ツリー</button>
+      <button type="button" class="seg-btn" data-mode="store">🏪 購入先別</button>
+      <button type="button" class="seg-btn" data-mode="payment">💳 支払方法別</button>
+    </div>
+
+    <div class="card" style="display:flex; flex-direction:column; align-items:center;">
+      <div style="font-size:13px; font-weight:700; margin-bottom:8px;" id="mChartTitle">構成比グラフ（タップで金額表示）</div>
+      <div id="mDonutBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" id="mBreakdownTitle">内訳一覧</div>
+      <div id="mBreakdownBody"></div>
+    </div>
+  </section>
+
+  <!-- TAB 3: HISTORY -->
+  <section class="page" id="page-history">
+    <div class="card" style="padding:12px;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <input type="text" id="mSearch" class="form-control" placeholder="🔍 商品名・購入先・メモで検索">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <select id="mFltStore" class="form-control"><option value="">すべての購入先</option></select>
+          <select id="mFltPay" class="form-control"><option value="">すべての支払方法</option></select>
+        </div>
+      </div>
+    </div>
+    <div id="mHistoryList"></div>
+  </section>
+
+  <!-- TAB 4: SETTINGS & MASTER -->
+  <section class="page" id="page-settings">
+    <div class="card">
+      <div class="section-title">🏪 よく使う購入先の追加・削除</div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="text" id="mNewStore" class="form-control" placeholder="店舗名（例: 業務スーパー）" maxlength="60">
+        <button type="button" class="btn" id="mAddStoreBtn">追加</button>
+      </div>
+      <div class="quick-row" id="mManageStoreList"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">💳 支払方法の追加・削除</div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="text" id="mNewPay" class="form-control" placeholder="支払方法（例: 楽天ペイ）" maxlength="40">
+        <button type="button" class="btn" id="mAddPayBtn">追加</button>
+      </div>
+      <div class="quick-row" id="mManagePayList"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🗂️ 3階層分類の追加</div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">新しい大分類・中分類・小分類の組み合わせを追加できます。</p>
+      <div class="form-group">
+        <input type="text" id="mNewCat1" class="form-control" placeholder="大分類（例: 医療・健康）" maxlength="30">
+      </div>
+      <div class="form-group">
+        <input type="text" id="mNewCat2" class="form-control" placeholder="中分類（例: 病院・歯科）" maxlength="30">
+      </div>
+      <div class="form-group">
+        <input type="text" id="mNewCat3" class="form-control" placeholder="小分類（例: 通院・処方薬）" maxlength="30">
+      </div>
+      <button type="button" class="btn" style="width:100%;" id="mAddCatBtn">＋ この分類を追加する</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">💾 データ出力・バックアップ（PC版互換）</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button type="button" class="btn" id="mExportCsvBtn">📄 当月データをCSV出力</button>
+        <button type="button" class="btn" id="mExportJsonBtn">⬇️ JSONバックアップを保存</button>
+        <div style="border-top:1px solid var(--border); padding-top:10px;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:6px;">JSONバックアップから復元：</div>
+          <input type="file" id="mImportJsonFile" accept=".json,application/json" style="margin-bottom:8px; width:100%;">
+          <button type="button" class="btn" style="width:100%;" id="mImportJsonBtn">⬆️ JSONファイルを読み込む</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button type="button" class="nav-btn active" data-target="page-input">
+      <span class="ico">📝</span><span>入力</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="page-analytics">
+      <span class="ico">📊</span><span>集計</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="page-history">
+      <span class="ico">🧾</span><span>履歴</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="page-settings">
+      <span class="ico">⚙️</span><span>設定</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="mToast"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const STORAGE_KEY = "secure_kakeibo_v2_data";
+      const PALETTE = ["#2563eb", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#db2777", "#4f46e5"];
+      const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+      const DEFAULT_CATEGORIES = {
+        "食費": {
+          "食料品": ["生鮮食品", "パン・穀物", "調味料・飲料", "お菓子・嗜好品"],
+          "外食": ["ランチ", "ディナー", "カフェ・喫茶"],
+          "中食・テイクアウト": ["弁当・惣菜", "デリバリー"]
+        },
+        "日用品": {
+          "生活雑貨": ["キッチン消耗品", "掃除・洗濯用品", "ティッシュ・衛生用品"],
+          "理美容・ドラッグ": ["シャンプー・化粧品", "市販薬・マスク"]
+        },
+        "交通・通信": {
+          "交通費": ["電車・バス", "ガソリン・駐車場", "タクシー"],
+          "通信費": ["携帯電話", "インターネット回線"]
+        },
+        "趣味・娯楽": {
+          "レジャー": ["書籍・雑誌", "映画・音楽", "旅行・宿泊"],
+          "衣服・ファッション": ["衣類", "靴・バッグ"]
+        },
+        "住居・光熱": {
+          "水道光熱費": ["電気代", "ガス代", "水道代"],
+          "住居費": ["家賃・管理費", "家具・家電"]
+        }
+      };
+
+      const DEFAULT_STORES = ["イオン", "セブン-イレブン", "Amazon", "楽天市場", "マツモトキヨシ", "業務スーパー", "スターバックス"];
+      const DEFAULT_PAYMENTS = ["クレジットカード", "現金", "PayPay・QR決済", "交通系IC・電子マネー", "デビットカード", "銀行振込・口座振替"];
+
+      function createInitialState() {
+        const now = new Date();
+        const ym = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+        return {
+          categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
+          stores: DEFAULT_STORES.slice(),
+          payments: DEFAULT_PAYMENTS.slice(),
+          expenses: [
+            { id: "exp_1", date: ym + "-02", item: "国産鶏むね肉・野菜セット", amount: 1850, store: "イオン", payment: "クレジットカード", cat1: "食費", cat2: "食料品", cat3: "生鮮食品", memo: "まとめ買い" },
+            { id: "exp_2", date: ym + "-05", item: "洗濯用洗剤・ティッシュ5箱", amount: 1120, store: "マツモトキヨシ", payment: "PayPay・QR決済", cat1: "日用品", cat2: "生活雑貨", cat3: "掃除・洗濯用品", memo: "" },
+            { id: "exp_3", date: ym + "-08", item: "ビジネス書籍2冊", amount: 3300, store: "Amazon", payment: "クレジットカード", cat1: "趣味・娯楽", cat2: "レジャー", cat3: "書籍・雑誌", memo: "" }
+          ]
+        };
+      }
+
+      function el(tag, attrs, children) {
+        const node = document.createElement(tag);
+        if (attrs) {
+          Object.keys(attrs).forEach(function (k) {
+            if (k === "className") node.className = attrs[k];
+            else if (k === "textContent") node.textContent = attrs[k];
+            else if (k === "style") node.setAttribute("style", attrs[k]);
+            else if (k.startsWith("data-")) node.setAttribute(k, attrs[k]);
+            else node[k] = attrs[k];
+          });
+        }
+        if (children) {
+          (Array.isArray(children) ? children : [children]).forEach(function (c) {
+            if (c !== null && c !== undefined) {
+              node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+            }
+          });
+        }
+        return node;
+      }
+
+      function clearNode(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+      }
+
+      function formatYen(n) {
+        return "¥" + Number(n || 0).toLocaleString("ja-JP");
+      }
+
+      function toast(msg) {
+        const t = document.getElementById("mToast");
+        t.textContent = msg;
+        t.classList.add("show");
+        setTimeout(function () { t.classList.remove("show"); }, 2400);
+      }
+
+      function sanitizeString(val, maxLen) {
+        if (typeof val !== "string") return "";
+        return val.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, maxLen);
+      }
+
+      function validateAndSanitizeState(raw) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+        const cleanCats = Object.create(null);
+        if (raw.categories && typeof raw.categories === "object" && !Array.isArray(raw.categories)) {
+          Object.keys(raw.categories).forEach(function (k1) {
+            if (FORBIDDEN_KEYS.has(k1)) return;
+            const c1 = sanitizeString(k1, 30);
+            if (!c1 || typeof raw.categories[k1] !== "object" || Array.isArray(raw.categories[k1])) return;
+            cleanCats[c1] = Object.create(null);
+            Object.keys(raw.categories[k1]).forEach(function (k2) {
+              if (FORBIDDEN_KEYS.has(k2)) return;
+              const c2 = sanitizeString(k2, 30);
+              const arr3 = raw.categories[k1][k2];
+              if (!c2 || !Array.isArray(arr3)) return;
+              const cleanArr3 = arr3
+                .map(function (v) { return sanitizeString(v, 30); })
+                .filter(function (v, idx, self) { return v && !FORBIDDEN_KEYS.has(v) && self.indexOf(v) === idx; });
+              if (cleanArr3.length > 0) cleanCats[c1][c2] = cleanArr3;
+            });
+            if (Object.keys(cleanCats[c1]).length === 0) delete cleanCats[c1];
+          });
+        }
+        if (Object.keys(cleanCats).length === 0) {
+          Object.assign(cleanCats, JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)));
+        }
+
+        const cleanStores = Array.isArray(raw.stores)
+          ? raw.stores.map(function (s) { return sanitizeString(s, 60); }).filter(function (s, i, a) { return s && a.indexOf(s) === i; })
+          : DEFAULT_STORES.slice();
+
+        const cleanPayments = Array.isArray(raw.payments)
+          ? raw.payments.map(function (p) { return sanitizeString(p, 40); }).filter(function (p, i, a) { return p && a.indexOf(p) === i; })
+          : DEFAULT_PAYMENTS.slice();
+        if (cleanPayments.length === 0) cleanPayments.push("現金");
+
+        const cleanExpenses = [];
+        if (Array.isArray(raw.expenses)) {
+          raw.expenses.forEach(function (item, idx) {
+            if (!item || typeof item !== "object" || Array.isArray(item)) return;
+            const date = sanitizeString(item.date, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+            const amount = Math.floor(Number(item.amount));
+            if (!Number.isFinite(amount) || amount < 1 || amount > 100000000) return;
+            const name = sanitizeString(item.item, 80);
+            if (!name) return;
+            const store = sanitizeString(item.store, 60) || "未指定";
+            const payment = sanitizeString(item.payment, 40) || "現金";
+            const cat1 = sanitizeString(item.cat1, 30) || "未分類";
+            const cat2 = sanitizeString(item.cat2, 30) || "未分類";
+            const cat3 = sanitizeString(item.cat3, 30) || "未分類";
+            const memo = sanitizeString(item.memo, 120);
+            const id = sanitizeString(item.id, 40) || ("exp_" + Date.now() + "_" + idx);
+            cleanExpenses.push({ id: id, date: date, item: name, amount: amount, store: store, payment: payment, cat1: cat1, cat2: cat2, cat3: cat3, memo: memo });
+          });
+        }
+        return { categories: cleanCats, stores: cleanStores, payments: cleanPayments, expenses: cleanExpenses };
+      }
+
+      let state = null;
+      let analyticsMode = "tree";
+      let openAcc = new Set();
+
+      function loadState() {
+        try {
+          const s = localStorage.getItem(STORAGE_KEY);
+          if (s) {
+            const v = validateAndSanitizeState(JSON.parse(s));
+            if (v) return v;
+          }
+        } catch (e) {}
+        return createInitialState();
+      }
+
+      function saveState() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      }
+
+      function getMonthList() {
+        const ym = document.getElementById("mCurrent").value;
+        return state.expenses
+          .filter(function (e) { return e.date.startsWith(ym); })
+          .sort(function (a, b) { return b.date.localeCompare(a.date); });
+      }
+
+      function syncSelectors() {
+        const paySel = document.getElementById("mPayment");
+        const prevPay = paySel.value;
+        clearNode(paySel);
+        state.payments.forEach(function (p) { paySel.appendChild(el("option", { value: p, textContent: p })); });
+        if (prevPay && state.payments.includes(prevPay)) paySel.value = prevPay;
+
+        const dl = document.getElementById("mStoreList");
+        const chips = document.getElementById("mStoreChips");
+        clearNode(dl);
+        clearNode(chips);
+        const allStores = state.stores.slice();
+        state.expenses.forEach(function (e) { if (e.store && !allStores.includes(e.store)) allStores.push(e.store); });
+        allStores.forEach(function (s) { dl.appendChild(el("option", { value: s })); });
+        state.stores.slice(0, 8).forEach(function (s) {
+          const b = el("button", { type: "button", className: "chip-btn", textContent: s });
+          b.addEventListener("click", function () { document.getElementById("mStore").value = s; });
+          chips.appendChild(b);
+        });
+
+        const c1 = document.getElementById("mCat1");
+        const prev1 = c1.value;
+        clearNode(c1);
+        Object.keys(state.categories).forEach(function (k) { c1.appendChild(el("option", { value: k, textContent: k })); });
+        if (prev1 && state.categories[prev1]) c1.value = prev1;
+        syncCat2();
+      }
+
+      function syncCat2() {
+        const c1 = document.getElementById("mCat1").value;
+        const c2 = document.getElementById("mCat2");
+        const prev2 = c2.value;
+        clearNode(c2);
+        const keys2 = Object.keys(state.categories[c1] || {});
+        keys2.forEach(function (k) { c2.appendChild(el("option", { value: k, textContent: k })); });
+        if (prev2 && keys2.includes(prev2)) c2.value = prev2;
+        syncCat3();
+      }
+
+      function syncCat3() {
+        const c1 = document.getElementById("mCat1").value;
+        const c2 = document.getElementById("mCat2").value;
+        const c3 = document.getElementById("mCat3");
+        const prev3 = c3.value;
+        clearNode(c3);
+        const arr3 = (state.categories[c1] && state.categories[c1][c2]) || [];
+        arr3.forEach(function (k) { c3.appendChild(el("option", { value: k, textContent: k })); });
+        if (prev3 && arr3.includes(prev3)) c3.value = prev3;
+      }
+
+      function renderDonut(items, total) {
+        const box = document.getElementById("mDonutBox");
+        clearNode(box);
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 200 200");
+        svg.setAttribute("width", "180");
+        svg.setAttribute("height", "180");
+        const cx = 100, cy = 100, r = 72, sw = 26, circ = 2 * Math.PI * r;
+
+        if (!items.length || total <= 0) {
+          const c = document.createElementNS(ns, "circle");
+          c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+          c.setAttribute("fill", "none"); c.setAttribute("stroke", "#e2e8f0"); c.setAttribute("stroke-width", sw);
+          svg.appendChild(c);
+          box.appendChild(svg);
+          return;
+        }
+
+        const lbl = document.createElementNS(ns, "text");
+        lbl.setAttribute("x", cx); lbl.setAttribute("y", cy - 6);
+        lbl.setAttribute("text-anchor", "middle"); lbl.setAttribute("font-size", "11");
+        lbl.setAttribute("font-weight", "700"); lbl.setAttribute("fill", "#64748b");
+        lbl.textContent = "合計";
+
+        const val = document.createElementNS(ns, "text");
+        val.setAttribute("x", cx); val.setAttribute("y", cy + 14);
+        val.setAttribute("text-anchor", "middle"); val.setAttribute("font-size", "14");
+        val.setAttribute("font-weight", "800"); val.setAttribute("fill", "#0f172a");
+        val.textContent = formatYen(total);
+
+        let off = 0;
+        items.forEach(function (it, idx) {
+          const pct = it.amount / total;
+          const dash = pct * circ;
+          const seg = document.createElementNS(ns, "circle");
+          seg.setAttribute("cx", cx); seg.setAttribute("cy", cy); seg.setAttribute("r", r);
+          seg.setAttribute("fill", "none"); seg.setAttribute("stroke", PALETTE[idx % PALETTE.length]);
+          seg.setAttribute("stroke-width", sw);
+          seg.setAttribute("stroke-dasharray", dash + " " + (circ - dash));
+          seg.setAttribute("stroke-dashoffset", -off);
+          seg.setAttribute("transform", "rotate(-90 " + cx + " " + cy + ")");
+          seg.addEventListener("click", function () {
+            lbl.textContent = it.name.slice(0, 10);
+            val.textContent = formatYen(it.amount) + " (" + (pct * 100).toFixed(1) + "%)";
+          });
+          svg.appendChild(seg);
+          off += dash;
+        });
+
+        svg.appendChild(lbl);
+        svg.appendChild(val);
+        box.appendChild(svg);
+      }
+
+      function renderAnalytics() {
+        const list = getMonthList();
+        const ym = document.getElementById("mCurrent").value;
+        const total = list.reduce(function (s, e) { return s + e.amount; }, 0);
+
+        document.getElementById("mBannerMonth").textContent = ym.replace("-", "年") + "月 支出合計";
+        document.getElementById("mBannerTotal").textContent = formatYen(total);
+        document.getElementById("mBannerSub").textContent = "登録件数: " + list.length + "件";
+
+        const body = document.getElementById("mBreakdownBody");
+        clearNode(body);
+
+        if (list.length === 0) {
+          renderDonut([], 0);
+          body.appendChild(el("div", { className: "empty", textContent: "この月のデータがありません。" }));
+          return;
+        }
+
+        if (analyticsMode === "tree") {
+          document.getElementById("mBreakdownTitle").textContent = "大分類 ＞ 中分類 ＞ 小分類 集計";
+          const tree = Object.create(null);
+          list.forEach(function (e) {
+            if (!tree[e.cat1]) tree[e.cat1] = { total: 0, sub: Object.create(null) };
+            tree[e.cat1].total += e.amount;
+            if (!tree[e.cat1].sub[e.cat2]) tree[e.cat1].sub[e.cat2] = { total: 0, leaf: Object.create(null) };
+            tree[e.cat1].sub[e.cat2].total += e.amount;
+            tree[e.cat1].sub[e.cat2].leaf[e.cat3] = (tree[e.cat1].sub[e.cat2].leaf[e.cat3] || 0) + e.amount;
+          });
+          const sorted1 = Object.keys(tree).sort(function (a, b) { return tree[b].total - tree[a].total; });
+          renderDonut(sorted1.map(function (k) { return { name: k, amount: tree[k].total }; }), total);
+
+          sorted1.forEach(function (c1) {
+            const d1 = tree[c1];
+            const k1 = "1:" + c1;
+            const open1 = openAcc.has(k1);
+            const item = el("div", { className: "acc-item" });
+            const head = el("div", { className: "acc-head" }, [
+              el("span", { textContent: (open1 ? "▼ " : "▶ ") + c1 }),
+              el("span", { textContent: formatYen(d1.total) + " (" + ((d1.total / total) * 100).toFixed(0) + "%)" })
+            ]);
+            head.addEventListener("click", function () {
+              if (openAcc.has(k1)) openAcc.delete(k1); else openAcc.add(k1);
+              renderAnalytics();
+            });
+            item.appendChild(head);
+
+            if (open1) {
+              Object.keys(d1.sub).sort(function (a, b) { return d1.sub[b].total - d1.sub[a].total; }).forEach(function (c2) {
+                const d2 = d1.sub[c2];
+                const k2 = "2:" + c1 + ">" + c2;
+                const open2 = openAcc.has(k2);
+                const subRow = el("div", { className: "acc-sub" }, [
+                  el("span", { style: "font-weight:700;", textContent: (open2 ? "▾ " : "▸ ") + c2 }),
+                  el("span", { style: "font-weight:700;", textContent: formatYen(d2.total) })
+                ]);
+                subRow.addEventListener("click", function () {
+                  if (openAcc.has(k2)) openAcc.delete(k2); else openAcc.add(k2);
+                  renderAnalytics();
+                });
+                item.appendChild(subRow);
+
+                if (open2) {
+                  Object.keys(d2.leaf).sort(function (a, b) { return d2.leaf[b] - d2.leaf[a]; }).forEach(function (c3) {
+                    item.appendChild(el("div", { className: "acc-leaf" }, [
+                      el("span", { textContent: "・" + c3 }),
+                      el("span", { textContent: formatYen(d2.leaf[c3]) })
+                    ]));
+                  });
+                }
+              });
+            }
+            body.appendChild(item);
+          });
+        } else {
+          const field = analyticsMode === "store" ? "store" : "payment";
+          const label = analyticsMode === "store" ? "購入先別 集計" : "支払方法別 集計";
+          document.getElementById("mBreakdownTitle").textContent = label + "（タップで履歴絞込）";
+
+          const map = Object.create(null);
+          list.forEach(function (e) {
+            const k = e[field] || "未設定";
+            if (!map[k]) map[k] = { amount: 0, count: 0 };
+            map[k].amount += e.amount;
+            map[k].count += 1;
+          });
+          const rows = Object.keys(map)
+            .map(function (k) { return { name: k, amount: map[k].amount, count: map[k].count }; })
+            .sort(function (a, b) { return b.amount - a.amount; });
+
+          renderDonut(rows, total);
+
+          rows.forEach(function (r, idx) {
+            const pct = ((r.amount / total) * 100).toFixed(1);
+            const row = el("div", { className: "rank-row", style: "cursor:pointer;" }, [
+              el("div", null, [
+                el("div", { style: "font-weight:700;", textContent: (idx + 1) + ". " + r.name }),
+                el("div", { style: "font-size:12px; color:var(--text-muted);", textContent: "利用回数: " + r.count + "回 / 構成比 " + pct + "%" })
+              ]),
+              el("div", { style: "font-weight:800; font-size:16px;", textContent: formatYen(r.amount) })
+            ]);
+            row.addEventListener("click", function () {
+              switchPage("page-history");
+              if (field === "store") document.getElementById("mFltStore").value = r.name;
+              else document.getElementById("mFltPay").value = r.name;
+              renderHistory();
+              toast("「" + r.name + "」で絞り込みました");
+            });
+            body.appendChild(row);
+          });
+        }
+      }
+
+      function renderHistory() {
+        const list = getMonthList();
+        const fltS = document.getElementById("mFltStore");
+        const fltP = document.getElementById("mFltPay");
+        const curS = fltS.value, curP = fltP.value;
+
+        const stores = Array.from(new Set(list.map(function (e) { return e.store; })));
+        const pays = Array.from(new Set(list.map(function (e) { return e.payment; })));
+
+        clearNode(fltS);
+        fltS.appendChild(el("option", { value: "", textContent: "すべての購入先" }));
+        stores.forEach(function (s) { fltS.appendChild(el("option", { value: s, textContent: s })); });
+        if (stores.includes(curS)) fltS.value = curS;
+
+        clearNode(fltP);
+        fltP.appendChild(el("option", { value: "", textContent: "すべての支払方法" }));
+        pays.forEach(function (p) { fltP.appendChild(el("option", { value: p, textContent: p })); });
+        if (pays.includes(curP)) fltP.value = curP;
+
+        const q = document.getElementById("mSearch").value.trim().toLowerCase();
+        const fs = fltS.value;
+        const fp = fltP.value;
+
+        const filtered = list.filter(function (e) {
+          if (fs && e.store !== fs) return false;
+          if (fp && e.payment !== fp) return false;
+          if (q && !(e.item.toLowerCase().includes(q) || e.store.toLowerCase().includes(q) || (e.memo && e.memo.toLowerCase().includes(q)))) return false;
+          return true;
+        });
+
+        const container = document.getElementById("mHistoryList");
+        clearNode(container);
+
+        if (filtered.length === 0) {
+          container.appendChild(el("div", { className: "empty", textContent: "該当する購入履歴がありません。" }));
+          return;
+        }
+
+        filtered.forEach(function (e) {
+          const btnEdit = el("button", { type: "button", className: "btn btn-sm", textContent: "編集" });
+          btnEdit.addEventListener("click", function () {
+            document.getElementById("mEditId").value = e.id;
+            document.getElementById("mDate").value = e.date;
+            document.getElementById("mAmount").value = e.amount;
+            document.getElementById("mItem").value = e.item;
+            document.getElementById("mStore").value = e.store;
+            if (state.payments.includes(e.payment)) document.getElementById("mPayment").value = e.payment;
+            if (state.categories[e.cat1]) {
+              document.getElementById("mCat1").value = e.cat1;
+              syncCat2();
+              if (state.categories[e.cat1][e.cat2]) {
+                document.getElementById("mCat2").value = e.cat2;
+                syncCat3();
+                if (state.categories[e.cat1][e.cat2].includes(e.cat3)) document.getElementById("mCat3").value = e.cat3;
+              }
+            }
+            document.getElementById("mMemo").value = e.memo || "";
+            document.getElementById("mFormTitle").textContent = "✏️ 明細の編集";
+            document.getElementById("mSubmitBtn").textContent = "✔ 変更を保存する";
+            document.getElementById("mCancelEdit").style.display = "inline-flex";
+            switchPage("page-input");
+          });
+
+          const btnDel = el("button", { type: "button", className: "btn btn-sm btn-danger", textContent: "削除" });
+          btnDel.addEventListener("click", function () {
+            if (confirm("「" + e.item + "」を削除しますか？")) {
+              state.expenses = state.expenses.filter(function (x) { return x.id !== e.id; });
+              saveState();
+              renderAll();
+              toast("削除しました");
+            }
+          });
+
+          const card = el("div", { className: "exp-card" }, [
+            el("div", { className: "exp-top" }, [
+              el("div", null, [
+                el("div", { style: "font-size:11px; color:var(--text-muted);", textContent: e.date }),
+                el("div", { className: "exp-name", textContent: e.item })
+              ]),
+              el("div", { className: "exp-amt", textContent: formatYen(e.amount) })
+            ]),
+            el("div", { className: "exp-meta" }, [
+              el("span", { className: "badge b-store", textContent: "🏪 " + e.store }),
+              el("span", { className: "badge b-pay", textContent: "💳 " + e.payment }),
+              el("span", { className: "badge b-cat", textContent: e.cat1 + " ＞ " + e.cat2 + " ＞ " + e.cat3 })
+            ]),
+            e.memo ? el("div", { style: "font-size:12px; color:var(--text-muted); margin-top:6px;", textContent: "メモ: " + e.memo }) : null,
+            el("div", { className: "exp-actions" }, [btnEdit, btnDel])
+          ]);
+          container.appendChild(card);
+        });
+      }
+
+      function renderSettingsLists() {
+        const sBox = document.getElementById("mManageStoreList");
+        clearNode(sBox);
+        state.stores.forEach(function (st) {
+          const b = el("button", { type: "button", className: "chip-btn", textContent: st + " ✕" });
+          b.addEventListener("click", function () {
+            state.stores = state.stores.filter(function (x) { return x !== st; });
+            saveState(); syncSelectors(); renderSettingsLists();
+          });
+          sBox.appendChild(b);
+        });
+
+        const pBox = document.getElementById("mManagePayList");
+        clearNode(pBox);
+        state.payments.forEach(function (py) {
+          const b = el("button", { type: "button", className: "chip-btn", textContent: py + " ✕" });
+          b.addEventListener("click", function () {
+            if (state.payments.length <= 1) return toast("支払方法は1つ以上必要です");
+            state.payments = state.payments.filter(function (x) { return x !== py; });
+            saveState(); syncSelectors(); renderSettingsLists();
+          });
+          pBox.appendChild(b);
+        });
+      }
+
+      function switchPage(pageId) {
+        document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
+        document.getElementById(pageId).classList.add("active");
+        document.querySelectorAll("#bottomNav .nav-btn").forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-target") === pageId);
+        });
+        if (pageId === "page-analytics") renderAnalytics();
+        if (pageId === "page-history") renderHistory();
+        if (pageId === "page-settings") renderSettingsLists();
+      }
+
+      function renderAll() {
+        syncSelectors();
+        renderAnalytics();
+        renderHistory();
+        renderSettingsLists();
+      }
+
+      function escapeCsvCell(val) {
+        let s = String(val === null || val === undefined ? "" : val);
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        state = loadState();
+        const now = new Date();
+        const ym = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+        document.getElementById("mCurrent").value = ym;
+        document.getElementById("mDate").value = ym + "-" + String(now.getDate()).padStart(2, "0");
+
+        renderAll();
+
+        document.getElementById("bottomNav").addEventListener("click", function (ev) {
+          const btn = ev.target.closest(".nav-btn");
+          if (btn) switchPage(btn.getAttribute("data-target"));
+        });
+
+        function shiftMonth(delta) {
+          const parts = document.getElementById("mCurrent").value.split("-").map(Number);
+          const d = new Date(parts[0], parts[1] - 1 + delta, 1);
+          document.getElementById("mCurrent").value = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+          renderAnalytics();
+          renderHistory();
+        }
+        document.getElementById("mPrev").addEventListener("click", function () { shiftMonth(-1); });
+        document.getElementById("mNext").addEventListener("click", function () { shiftMonth(1); });
+        document.getElementById("mCurrent").addEventListener("change", function () { renderAnalytics(); renderHistory(); });
+
+        document.getElementById("mQuickMoney").addEventListener("click", function (ev) {
+          const btn = ev.target.closest("[data-add]");
+          if (!btn) return;
+          const inp = document.getElementById("mAmount");
+          inp.value = (Number(inp.value) || 0) + Number(btn.getAttribute("data-add"));
+        });
+
+        document.getElementById("mCat1").addEventListener("change", syncCat2);
+        document.getElementById("mCat2").addEventListener("change", syncCat3);
+
+        document.getElementById("mExpenseForm").addEventListener("submit", function (ev) {
+          ev.preventDefault();
+          const date = sanitizeString(document.getElementById("mDate").value, 10);
+          const amount = Math.floor(Number(document.getElementById("mAmount").value));
+          const item = sanitizeString(document.getElementById("mItem").value, 80);
+          const store = sanitizeString(document.getElementById("mStore").value, 60);
+          const payment = sanitizeString(document.getElementById("mPayment").value, 40);
+          const cat1 = sanitizeString(document.getElementById("mCat1").value, 30);
+          const cat2 = sanitizeString(document.getElementById("mCat2").value, 30);
+          const cat3 = sanitizeString(document.getElementById("mCat3").value, 30);
+          const memo = sanitizeString(document.getElementById("mMemo").value, 120);
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return toast("⚠️ 購入日を入力してください");
+          if (!Number.isFinite(amount) || amount < 1 || amount > 100000000) return toast("⚠️ 金額を入力してください");
+          if (!item) return toast("⚠️ 商品名を入力してください");
+          if (!store) return toast("⚠️ 購入先を入力してください");
+          if (!payment) return toast("⚠️ 支払方法を選択してください");
+
+          const editId = document.getElementById("mEditId").value;
+          if (editId) {
+            const idx = state.expenses.findIndex(function (x) { return x.id === editId; });
+            if (idx !== -1) state.expenses[idx] = { id: editId, date: date, item: item, amount: amount, store: store, payment: payment, cat1: cat1, cat2: cat2, cat3: cat3, memo: memo };
+            document.getElementById("mEditId").value = "";
+            document.getElementById("mFormTitle").textContent = "📝 購入商品の登録";
+            document.getElementById("mSubmitBtn").textContent = "＋ 家計簿に登録する";
+            document.getElementById("mCancelEdit").style.display = "none";
+            toast("✔ 更新しました");
+          } else {
+            state.expenses.push({
+              id: "exp_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+              date: date, item: item, amount: amount, store: store, payment: payment, cat1: cat1, cat2: cat2, cat3: cat3, memo: memo
+            });
+            toast("✔ 登録しました");
+          }
+
+          document.getElementById("mAmount").value = "";
+          document.getElementById("mItem").value = "";
+          document.getElementById("mMemo").value = "";
+          document.getElementById("mCurrent").value = date.slice(0, 7);
+          saveState();
+          renderAll();
+        });
+
+        document.getElementById("mCancelEdit").addEventListener("click", function () {
+          document.getElementById("mEditId").value = "";
+          document.getElementById("mAmount").value = "";
+          document.getElementById("mItem").value = "";
+          document.getElementById("mMemo").value = "";
+          document.getElementById("mFormTitle").textContent = "📝 購入商品の登録";
+          document.getElementById("mSubmitBtn").textContent = "＋ 家計簿に登録する";
+          document.getElementById("mCancelEdit").style.display = "none";
+        });
+
+        document.getElementById("mAnalyticsMode").addEventListener("click", function (ev) {
+          const btn = ev.target.closest(".seg-btn");
+          if (!btn) return;
+          document.querySelectorAll("#mAnalyticsMode .seg-btn").forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          analyticsMode = btn.getAttribute("data-mode");
+          renderAnalytics();
+        });
+
+        ["mSearch", "mFltStore", "mFltPay"].forEach(function (id) {
+          document.getElementById(id).addEventListener("input", renderHistory);
+          document.getElementById(id).addEventListener("change", renderHistory);
+        });
+
+        document.getElementById("mAddStoreBtn").addEventListener("click", function () {
+          const inp = document.getElementById("mNewStore");
+          const v = sanitizeString(inp.value, 60);
+          if (!v) return;
+          if (!state.stores.includes(v)) state.stores.push(v);
+          inp.value = ""; saveState(); syncSelectors(); renderSettingsLists(); toast("購入先を追加しました");
+        });
+
+        document.getElementById("mAddPayBtn").addEventListener("click", function () {
+          const inp = document.getElementById("mNewPay");
+          const v = sanitizeString(inp.value, 40);
+          if (!v) return;
+          if (!state.payments.includes(v)) state.payments.push(v);
+          inp.value = ""; saveState(); syncSelectors(); renderSettingsLists(); toast("支払方法を追加しました");
+        });
+
+        document.getElementById("mAddCatBtn").addEventListener("click", function () {
+          const c1 = sanitizeString(document.getElementById("mNewCat1").value, 30);
+          const c2 = sanitizeString(document.getElementById("mNewCat2").value, 30);
+          const c3 = sanitizeString(document.getElementById("mNewCat3").value, 30);
+          if (!c1 || !c2 || !c3 || FORBIDDEN_KEYS.has(c1) || FORBIDDEN_KEYS.has(c2)) return toast("⚠️ 3階層すべて入力してください");
+          if (!state.categories[c1]) state.categories[c1] = Object.create(null);
+          if (!state.categories[c1][c2]) state.categories[c1][c2] = [];
+          if (!state.categories[c1][c2].includes(c3)) state.categories[c1][c2].push(c3);
+          document.getElementById("mNewCat1").value = "";
+          document.getElementById("mNewCat2").value = "";
+          document.getElementById("mNewCat3").value = "";
+          saveState(); syncSelectors(); toast("新しい分類を追加しました");
+        });
+
+        document.getElementById("mExportCsvBtn").addEventListener("click", function () {
+          const list = getMonthList();
+          if (!list.length) return toast("出力データがありません");
+          const ym = document.getElementById("mCurrent").value;
+          const lines = [["購入日", "商品名", "購入先", "支払方法", "大分類", "中分類", "小分類", "金額", "メモ"].map(escapeCsvCell).join(",")];
+          list.forEach(function (e) {
+            lines.push([e.date, e.item, e.store, e.payment, e.cat1, e.cat2, e.cat3, e.amount, e.memo || ""].map(escapeCsvCell).join(","));
+          });
+          const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = "kakeibo_" + ym + ".csv"; a.click();
+          URL.revokeObjectURL(url);
+          toast("CSVを出力しました");
+        });
+
+        document.getElementById("mExportJsonBtn").addEventListener("click", function () {
+          const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = "secure_kakeibo_backup_" + new Date().toISOString().slice(0, 10) + ".json"; a.click();
+          URL.revokeObjectURL(url);
+          toast("バックアップを保存しました");
+        });
+
+        document.getElementById("mImportJsonBtn").addEventListener("click", function () {
+          const f = document.getElementById("mImportJsonFile").files[0];
+          if (!f) return toast("⚠️ ファイルを選択してください");
+          const reader = new FileReader();
+          reader.onload = function () {
+            try {
+              const v = validateAndSanitizeState(JSON.parse(String(reader.result)));
+              if (!v) return toast("⚠️ 無効なデータ形式です");
+              state = v; saveState(); renderAll(); toast("✔ 復元が完了しました");
+            } catch (e) { toast("⚠️ 読み込みに失敗しました"); }
+          };
+          reader.readAsText(f);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
