@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none';">
   <meta name="referrer" content="no-referrer">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
@@ -49,20 +49,22 @@
       padding: 10px 14px;
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
-    .app-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    .app-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     .lock-pill {
       font-size: 10px; font-weight: 700;
       background: var(--success-light); color: var(--success);
       border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 999px;
+      white-space: nowrap;
     }
     .month-switcher {
       display: flex; align-items: center; gap: 4px;
       background: var(--surface-alt); border: 1px solid var(--border);
-      border-radius: 999px; padding: 2px 6px;
+      border-radius: 999px; padding: 2px 6px; flex-shrink: 0;
     }
     .month-switcher button {
       width: 30px; height: 30px; border-radius: 50%;
       border: none; background: var(--surface); font-weight: 800; font-size: 13px;
+      flex-shrink: 0;
     }
     .month-switcher input[type="month"] {
       border: none; background: transparent;
@@ -113,17 +115,64 @@
     }
     .section-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
 
+    /* Receipt Preview Box */
+    .receipt-box {
+      background: var(--surface-alt);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .receipt-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .receipt-zoom-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .receipt-viewer {
+      margin-top: 10px;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0f172a;
+      display: none;
+    }
+    .receipt-viewer.has-image {
+      display: block;
+    }
+    .receipt-viewer img {
+      display: block;
+      width: 100%;
+      height: auto;
+      transform-origin: top left;
+      transition: width 0.15s ease;
+    }
+    .receipt-viewer.zoom-150 img {
+      width: 150%;
+    }
+    .receipt-viewer.zoom-200 img {
+      width: 200%;
+    }
+
     /* Form Controls (16px+ prevents iOS Safari auto-zoom) */
     .form-group { margin-bottom: 14px; }
     .form-label {
       display: flex; align-items: center; justify-content: space-between;
       font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;
     }
-    .req { background: var(--danger-light); color: var(--danger); font-size: 10px; padding: 1px 6px; border-radius: 4px; }
-    .opt { background: var(--surface-alt); color: var(--text-muted); font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+    .req { background: var(--danger-light); color: var(--danger); font-size: 10px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+    .opt { background: var(--surface-alt); color: var(--text-muted); font-size: 10px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
 
     .form-control {
-      width: 100%; min-height: 46px; padding: 10px 12px;
+      width: 100%; min-width: 0; min-height: 46px; padding: 10px 12px;
       border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
       font-size: 16px; color: var(--text); background: var(--surface);
     }
@@ -134,6 +183,7 @@
       min-height: 36px; padding: 6px 12px;
       border-radius: 999px; border: 1px solid var(--border-strong);
       background: var(--surface-alt); font-size: 13px; font-weight: 600; color: #1e293b;
+      white-space: nowrap;
     }
     .chip-btn:active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 
@@ -148,10 +198,23 @@
       border-radius: var(--radius-sm); font-size: 15px; font-weight: 700;
       border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      white-space: nowrap;
     }
+    .btn-nowrap { white-space: nowrap; flex-shrink: 0; }
     .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); width: 100%; min-height: 52px; font-size: 16px; }
     .btn-danger { background: var(--danger-light); color: var(--danger); border-color: #fecaca; }
     .btn-sm { min-height: 34px; padding: 4px 10px; font-size: 12px; }
+
+    .inline-add-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .inline-add-row .form-control {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
 
     /* Sub Tabs in Analytics */
     .seg-tabs {
@@ -162,6 +225,7 @@
     .seg-btn {
       min-height: 38px; border: none; background: transparent;
       border-radius: 8px; font-size: 13px; font-weight: 700; color: #475569;
+      white-space: nowrap;
     }
     .seg-btn.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 
@@ -199,7 +263,7 @@
     .exp-name { font-weight: 800; font-size: 15px; }
     .exp-amt { font-weight: 800; font-size: 16px; color: var(--text); white-space: nowrap; }
     .exp-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
-    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
     .b-store { background: #fef3c7; color: #92400e; }
     .b-pay { background: #e0e7ff; color: #3730a3; }
     .b-cat { background: #f1f5f9; color: #334155; }
@@ -218,6 +282,7 @@
       border: none; background: transparent;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
       font-size: 11px; font-weight: 700; color: var(--text-muted);
+      white-space: nowrap;
     }
     .nav-btn .ico { font-size: 20px; }
     .nav-btn.active { color: var(--primary); }
@@ -232,8 +297,7 @@
     }
     .toast.show { opacity: 1; }
     .empty { text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 14px; }
-    </style>
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  </style>
 </head>
 <body>
 
@@ -254,9 +318,30 @@
     <div class="input-page-wrap">
       <div class="card input-card-right">
         <div class="section-title">
-          <button type="button" class="btn btn-sm" id="mCancelEdit" style="display:none;">キャンセル</button>
+          <button type="button" class="btn btn-sm btn-nowrap" id="mCancelEdit" style="display:none;">キャンセル</button>
           <span id="mFormTitle">📝 購入商品の登録</span>
         </div>
+
+        <!-- Receipt Photo Preview (Local Only, Zero Network) -->
+        <div class="receipt-box">
+          <div class="receipt-toolbar">
+            <label for="mReceiptFile" class="btn btn-sm btn-nowrap" style="cursor:pointer;">📷 レシート写真を表示</label>
+            <input type="file" id="mReceiptFile" accept="image/*" capture="environment" style="display:none;">
+            <div class="receipt-zoom-group" id="mReceiptControls" style="display:none;">
+              <button type="button" class="chip-btn btn-nowrap" data-zoom="100">1x</button>
+              <button type="button" class="chip-btn btn-nowrap" data-zoom="150">1.5x</button>
+              <button type="button" class="chip-btn btn-nowrap" data-zoom="200">2x</button>
+              <button type="button" class="btn btn-sm btn-danger btn-nowrap" id="mClearReceipt">閉じる</button>
+            </div>
+          </div>
+          <div id="mReceiptHint" style="font-size:11px; color:var(--text-muted); margin-top:6px;">
+            ※ 端末内のみでプレビュー表示します（外部へ送信されません）。
+          </div>
+          <div class="receipt-viewer" id="mReceiptViewer">
+            <img id="mReceiptImg" alt="レシートプレビュー">
+          </div>
+        </div>
+
         <form id="mExpenseForm" novalidate>
           <input type="hidden" id="mEditId" value="">
 
@@ -269,6 +354,7 @@
             <label class="form-label" for="mAmount"><span class="req">必須</span> 金額（円）</label>
             <input type="number" id="mAmount" class="form-control" inputmode="numeric" min="1" max="100000000" placeholder="0" required>
             <div class="quick-row" id="mQuickMoney">
+              <button type="button" class="chip-btn" id="mClearAmount">クリア</button>
               <button type="button" class="chip-btn" data-add="100">+100</button>
               <button type="button" class="chip-btn" data-add="500">+500</button>
               <button type="button" class="chip-btn" data-add="1000">+1,000</button>
@@ -362,18 +448,18 @@
   <section class="page" id="page-settings">
     <div class="card">
       <div class="section-title">🏪 よく使う購入先の追加・削除</div>
-      <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div class="inline-add-row">
         <input type="text" id="mNewStore" class="form-control" placeholder="店舗名（例: 業務スーパー）" maxlength="60">
-        <button type="button" class="btn" id="mAddStoreBtn">追加</button>
+        <button type="button" class="btn btn-primary btn-nowrap" style="width:auto; min-height:46px;" id="mAddStoreBtn">＋ 追加</button>
       </div>
       <div class="quick-row" id="mManageStoreList"></div>
     </div>
 
     <div class="card">
       <div class="section-title">💳 支払方法の追加・削除</div>
-      <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div class="inline-add-row">
         <input type="text" id="mNewPay" class="form-control" placeholder="支払方法（例: 楽天ペイ）" maxlength="40">
-        <button type="button" class="btn" id="mAddPayBtn">追加</button>
+        <button type="button" class="btn btn-primary btn-nowrap" style="width:auto; min-height:46px;" id="mAddPayBtn">＋ 追加</button>
       </div>
       <div class="quick-row" id="mManagePayList"></div>
     </div>
@@ -390,7 +476,7 @@
       <div class="form-group">
         <input type="text" id="mNewCat3" class="form-control" placeholder="小分類（例: 通院・処方薬）" maxlength="30">
       </div>
-      <button type="button" class="btn" style="width:100%;" id="mAddCatBtn">＋ この分類を追加する</button>
+      <button type="button" class="btn btn-primary" id="mAddCatBtn">＋ この分類を追加する</button>
     </div>
 
     <div class="card">
@@ -577,6 +663,32 @@
       let state = null;
       let analyticsMode = "tree";
       let openAcc = new Set();
+      let receiptObjectUrl = null;
+
+      function clearReceiptPreview() {
+        const img = document.getElementById("mReceiptImg");
+        const viewer = document.getElementById("mReceiptViewer");
+        const controls = document.getElementById("mReceiptControls");
+        const hint = document.getElementById("mReceiptHint");
+        const fileInp = document.getElementById("mReceiptFile");
+
+        if (receiptObjectUrl) {
+          URL.revokeObjectURL(receiptObjectUrl);
+          receiptObjectUrl = null;
+        }
+        img.removeAttribute("src");
+        viewer.classList.remove("has-image", "zoom-150", "zoom-200");
+        controls.style.display = "none";
+        hint.textContent = "※ 端末内のみでプレビュー表示します（外部へ送信されません）。";
+        fileInp.value = "";
+      }
+
+      function setReceiptZoom(zoomVal) {
+        const viewer = document.getElementById("mReceiptViewer");
+        viewer.classList.remove("zoom-150", "zoom-200");
+        if (zoomVal === "150") viewer.classList.add("zoom-150");
+        else if (zoomVal === "200") viewer.classList.add("zoom-200");
+      }
 
       function loadState() {
         try {
@@ -856,7 +968,7 @@
         }
 
         filtered.forEach(function (e) {
-          const btnEdit = el("button", { type: "button", className: "btn btn-sm", textContent: "編集" });
+          const btnEdit = el("button", { type: "button", className: "btn btn-sm btn-nowrap", textContent: "編集" });
           btnEdit.addEventListener("click", function () {
             document.getElementById("mEditId").value = e.id;
             document.getElementById("mDate").value = e.date;
@@ -880,7 +992,7 @@
             switchPage("page-input");
           });
 
-          const btnDel = el("button", { type: "button", className: "btn btn-sm btn-danger", textContent: "削除" });
+          const btnDel = el("button", { type: "button", className: "btn btn-sm btn-danger btn-nowrap", textContent: "削除" });
           btnDel.addEventListener("click", function () {
             if (confirm("「" + e.item + "」を削除しますか？")) {
               state.expenses = state.expenses.filter(function (x) { return x.id !== e.id; });
@@ -968,6 +1080,35 @@
 
         renderAll();
 
+        document.getElementById("mReceiptFile").addEventListener("change", function (ev) {
+          const file = ev.target.files && ev.target.files[0];
+          if (!file || !file.type || !file.type.startsWith("image/")) {
+            clearReceiptPreview();
+            return;
+          }
+          if (receiptObjectUrl) URL.revokeObjectURL(receiptObjectUrl);
+          receiptObjectUrl = URL.createObjectURL(file);
+          const img = document.getElementById("mReceiptImg");
+          const viewer = document.getElementById("mReceiptViewer");
+          const controls = document.getElementById("mReceiptControls");
+          const hint = document.getElementById("mReceiptHint");
+
+          img.src = receiptObjectUrl;
+          setReceiptZoom("100");
+          viewer.classList.add("has-image");
+          controls.style.display = "flex";
+          hint.textContent = "表示中: " + sanitizeString(file.name, 50) + "（1x / 1.5x / 2x で拡大可能）";
+        });
+
+        document.getElementById("mReceiptControls").addEventListener("click", function (ev) {
+          const zoomBtn = ev.target.closest("[data-zoom]");
+          if (zoomBtn) {
+            setReceiptZoom(zoomBtn.getAttribute("data-zoom"));
+          }
+        });
+
+        document.getElementById("mClearReceipt").addEventListener("click", clearReceiptPreview);
+
         document.getElementById("bottomNav").addEventListener("click", function (ev) {
           const btn = ev.target.closest(".nav-btn");
           if (btn) switchPage(btn.getAttribute("data-target"));
@@ -983,6 +1124,10 @@
         document.getElementById("mPrev").addEventListener("click", function () { shiftMonth(-1); });
         document.getElementById("mNext").addEventListener("click", function () { shiftMonth(1); });
         document.getElementById("mCurrent").addEventListener("change", function () { renderAnalytics(); renderHistory(); });
+
+        document.getElementById("mClearAmount").addEventListener("click", function () {
+          document.getElementById("mAmount").value = "";
+        });
 
         document.getElementById("mQuickMoney").addEventListener("click", function (ev) {
           const btn = ev.target.closest("[data-add]");
@@ -1129,12 +1274,13 @@
           };
           reader.readAsText(f);
         });
-      });
-      if ("serviceWorker" in navigator) {
+
+        if ("serviceWorker" in navigator) {
           window.addEventListener("load", function () {
             navigator.serviceWorker.register("./sw.js").catch(function () {});
           });
         }
+      });
     })();
   </script>
 </body>
