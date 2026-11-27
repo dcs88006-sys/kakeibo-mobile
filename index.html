@@ -319,10 +319,21 @@
                 <i class="fa-solid fa-rotate-right mr-0.5"></i>撮り直す
               </button>
             </div>
-            <button type="button" id="run-ocr-btn" onclick="runReceiptOCR()" class="w-full py-2.5 bg-indigo-600 active:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
-              <span>画像から文字を読み取る (OCR)</span>
-            </button>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" id="run-ai-ocr-btn" onclick="runGeminiReceiptAnalysis()" class="col-span-2 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 active:from-blue-700 active:to-indigo-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>AI高精度解析 (Gemini)</span>
+              </button>
+              <button type="button" id="run-ocr-btn" onclick="runReceiptOCR()" class="py-2.5 bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1">
+                <span>標準OCR</span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-500 px-1">
+              <span id="gemini-key-status-badge">Gemini APIキー: 未設定</span>
+              <button type="button" onclick="openAiKeySettingsFromEntry()" class="text-brand-600 font-bold underline">
+                APIキー設定
+              </button>
+            </div>
             <div id="ocr-progress-box" class="hidden">
               <div class="flex justify-between text-[10px] text-indigo-700 font-bold mb-1">
                 <span id="ocr-status-text">OCR処理中...</span>
@@ -423,7 +434,7 @@
          ========================================================= -->
     <section id="view-master" class="hidden space-y-3.5">
       <!-- サブタブ切り替えピル -->
-      <div class="bg-white p-1.5 rounded-2xl border border-slate-200 grid grid-cols-4 gap-1 shadow-2xs">
+      <div class="bg-white p-1.5 rounded-2xl border border-slate-200 grid grid-cols-5 gap-1 shadow-2xs">
         <button type="button" id="m-tab-categories" onclick="switchMasterTab('categories')" class="py-2 rounded-xl text-[11px] font-bold text-slate-600 tab-pill-active">
           分類階層
         </button>
@@ -432,6 +443,9 @@
         </button>
         <button type="button" id="m-tab-payments" onclick="switchMasterTab('payments')" class="py-2 rounded-xl text-[11px] font-bold text-slate-600">
           支払方法
+        </button>
+        <button type="button" id="m-tab-ai" onclick="switchMasterTab('ai')" class="py-2 rounded-xl text-[11px] font-bold text-slate-600">
+          AI設定
         </button>
         <button type="button" id="m-tab-icon" onclick="switchMasterTab('icon')" class="py-2 rounded-xl text-[11px] font-bold text-slate-600">
           アイコン
@@ -491,7 +505,35 @@
         <div id="master-payment-list" class="divide-y divide-slate-100"></div>
       </div>
 
-      <!-- 4. ホーム画面ショートカットアイコン設定 -->
+      <!-- 4. Gemini AI設定 -->
+      <div id="master-pane-ai" class="hidden bg-white rounded-2xl border border-slate-200 p-4 space-y-3.5 shadow-2xs">
+        <div class="flex items-center gap-2 text-brand-700">
+          <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+          <h3 class="text-xs font-bold text-slate-800">Gemini APIキー設定（AIレシート解析）</h3>
+        </div>
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          Google AI Studio で取得した Gemini APIキーを設定すると、撮影したレシートから<strong>日付・店舗名・正確な商品名・金額・大中小分類の自動仕分け</strong>を一括で高精度に解析できます。キーはスマホのブラウザ内のみに保存されます。
+        </p>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Gemini API キー</label>
+          <div class="flex gap-1.5">
+            <input type="password" id="gemini-api-key-input" placeholder="AIzaSy..." class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl font-mono">
+            <button type="button" onclick="toggleGeminiKeyVisibility()" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs rounded-xl" aria-label="表示切替">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button type="button" onclick="clearGeminiApiKey()" class="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 rounded-xl">
+            キーを削除
+          </button>
+          <button type="button" onclick="saveGeminiApiKey()" class="px-4 py-2 bg-brand-600 active:bg-brand-700 text-white text-xs font-bold rounded-xl">
+            APIキーを保存
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. ホーム画面ショートカットアイコン設定 -->
       <div id="master-pane-icon" class="hidden bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-2xs">
         <div class="flex items-center gap-3.5 pb-3 border-b border-slate-100">
           <img id="icon-settings-preview" src="" alt="アイコンプレビュー" class="w-16 h-16 rounded-2xl shadow-md border border-slate-200 object-cover shrink-0">
@@ -577,6 +619,7 @@
     // 1. 定数・初期データ・サニタイズ関数
     // =========================================================================
     const STORAGE_KEY = 'smart_kakeibo_pro_v1';
+    const GEMINI_KEY_STORAGE = 'smart_kakeibo_gemini_api_key_v1';
     const ICON_STORAGE_KEY = 'smart_kakeibo_custom_icon_v1';
     const MAX_STRING_LEN = 120;
     const MAX_MEMO_LEN = 500;
@@ -1825,85 +1868,238 @@
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       stopReceiptCamera();
       setPreviewImageDataUrl(dataUrl);
-      showToast('撮影しました。OCR解析を開始します...', 'info');
-      await runReceiptOCR();
+      if (getGeminiApiKey()) {
+        showToast('撮影しました。Gemini AIでレシート解析を開始します...', 'info');
+        await runGeminiReceiptAnalysis();
+      } else {
+        showToast('撮影しました。標準OCR解析を開始します...', 'info');
+        await runReceiptOCR();
+      }
     }
 
-    function buildEnhancedCanvasFromImage(imgEl, enhanceContrast) {
-      const canvas = document.createElement('canvas');
-      const maxDim = 1800;
-      let w = imgEl.naturalWidth || imgEl.width;
-      let h = imgEl.naturalHeight || imgEl.height;
-      if (w > maxDim || h > maxDim) {
-        const scale = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
+    // =========================================================================
+    // 8-B. Gemini APIキー管理＆AIレシート画像解析
+    // =========================================================================
+    function getGeminiApiKey() {
+      try {
+        return (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim();
+      } catch {
+        return '';
       }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(imgEl, 0, 0, w, h);
+    }
 
-      if (enhanceContrast) {
-        const imgData = ctx.getImageData(0, 0, w, h);
-        const data = imgData.data;
-        const contrast = 1.45;
-        const intercept = 128 * (1 - contrast);
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-          const val = Math.min(255, Math.max(0, gray * contrast + intercept));
-          data[i] = data[i + 1] = data[i + 2] = val;
+    function updateGeminiKeyStatusUI() {
+      const key = getGeminiApiKey();
+      const badge = document.getElementById('gemini-key-status-badge');
+      const input = document.getElementById('gemini-api-key-input');
+      if (badge) {
+        badge.innerHTML = key
+          ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-0.5"></i>Gemini APIキー: 設定済</span>`
+          : `<span class="text-slate-400">Gemini APIキー: 未設定</span>`;
+      }
+      if (input && key) {
+        input.value = key;
+      }
+    }
+
+    function openAiKeySettingsFromEntry() {
+      switchMobileView('master');
+      switchMasterTab('ai');
+    }
+
+    function saveGeminiApiKey() {
+      const input = document.getElementById('gemini-api-key-input');
+      const val = (input?.value || '').trim();
+      if (!val) {
+        showToast('APIキーを入力してください', 'warning');
+        return;
+      }
+      try {
+        localStorage.setItem(GEMINI_KEY_STORAGE, val);
+        updateGeminiKeyStatusUI();
+        showToast('Gemini APIキーを保存しました', 'success');
+      } catch {
+        showToast('APIキーの保存に失敗しました', 'error');
+      }
+    }
+
+    function clearGeminiApiKey() {
+      try {
+        localStorage.removeItem(GEMINI_KEY_STORAGE);
+        const input = document.getElementById('gemini-api-key-input');
+        if (input) input.value = '';
+        updateGeminiKeyStatusUI();
+        showToast('Gemini APIキーを削除しました', 'info');
+      } catch {}
+    }
+
+    function toggleGeminiKeyVisibility() {
+      const input = document.getElementById('gemini-api-key-input');
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function buildCategoryHierarchyPromptText() {
+      const lines = [];
+      for (const maj of appState.categories) {
+        for (const med of maj.mediums) {
+          for (const min of med.minors) {
+            lines.push(`- majorId="${maj.id}" (${maj.name}) > mediumId="${med.id}" (${med.name}) > minorId="${min.id}" (${min.name})`);
+          }
         }
-        ctx.putImageData(imgData, 0, 0);
       }
-      return canvas;
+      return lines.join('\n');
     }
 
-    async function runReceiptOCR() {
+    async function fetchWithRetry(url, options, maxRetries = 3) {
+      let delay = 1000;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const res = await fetch(url, options);
+        if (res.ok || (res.status !== 429 && res.status < 500) || attempt === maxRetries) {
+          return res;
+        }
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2;
+      }
+    }
+
+    async function runGeminiReceiptAnalysis() {
       const imgEl = document.getElementById('receipt-preview-img');
-      if (!imgEl || !imgEl.src) return;
-      if (typeof Tesseract === 'undefined') {
-        showToast('OCRライブラリが利用できません', 'error');
+      if (!imgEl || !imgEl.src) {
+        showToast('先にレシート画像を選択または撮影してください', 'warning');
         return;
       }
 
-      const enhance = document.getElementById('ocr-enhance-contrast')?.checked ?? true;
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        showToast('Gemini APIキーが未設定のため、標準OCRを実行します', 'info');
+        await runReceiptOCR();
+        return;
+      }
+
+      const aiBtn = document.getElementById('run-ai-ocr-btn');
       const progBox = document.getElementById('ocr-progress-box');
       const statusEl = document.getElementById('ocr-status-text');
       const pctEl = document.getElementById('ocr-percent-text');
       const barEl = document.getElementById('ocr-progress-bar');
-      const runBtn = document.getElementById('run-ocr-btn');
 
       try {
-        if (runBtn) runBtn.disabled = true;
+        if (aiBtn) aiBtn.disabled = true;
         if (progBox) progBox.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Gemini AIでレシート画像を解析中...';
+        if (pctEl) pctEl.textContent = '50%';
+        if (barEl) barEl.style.width = '50%';
 
-        const targetCanvas = buildEnhancedCanvasFromImage(imgEl, enhance);
-        const result = await Tesseract.recognize(targetCanvas, 'jpn+eng', {
-          logger: (m) => {
-            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-              const p = Math.round(m.progress * 100);
-              if (statusEl) statusEl.textContent = '文字を認識中...';
-              if (pctEl) pctEl.textContent = `${p}%`;
-              if (barEl) barEl.style.width = `${p}%`;
+        const canvas = buildEnhancedCanvasFromImage(imgEl, false);
+        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        const base64Data = jpegDataUrl.split(',')[1];
+
+        const categoryListText = buildCategoryHierarchyPromptText();
+        const promptText = `あなたは日本の家計簿アシスタントです。添付されたレシート画像を正確に読み取り、購入日・購入先店舗名・支払方法（読み取れる場合）・購入商品リストを抽出してください。
+また、各商品について以下のカテゴリー一覧から最も適切な majorId, mediumId, minorId を選択してください。割引・値引行がある場合は直前の商品金額から差し引くか、実支払額ベースで整理してください。小計・合計・消費税（外税の合計欄）・お釣りは商品リストに含めないでください。
+
+【利用可能なカテゴリー一覧】
+${categoryListText}`;
+
+        const payload = {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: promptText },
+                {
+                  inlineData: {
+                    mimeType: 'image/jpeg',
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                date: { type: 'STRING', description: 'YYYY-MM-DD形式の購入日。不明な場合は空文字' },
+                store: { type: 'STRING', description: '店舗名・購入先' },
+                payment: { type: 'STRING', description: '支払方法（現金、クレジットカード、PayPayなど）。不明なら空文字' },
+                items: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      name: { type: 'STRING', description: 'わかりやすい商品名' },
+                      price: { type: 'INTEGER', description: '税込または支払金額（整数・円）' },
+                      majorId: { type: 'STRING' },
+                      mediumId: { type: 'STRING' },
+                      minorId: { type: 'STRING' }
+                    },
+                    required: ['name', 'price', 'majorId', 'mediumId', 'minorId']
+                  }
+                }
+              },
+              required: ['date', 'store', 'items']
             }
           }
+        };
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
-        const rawText = result?.data?.text || '';
-        const textArea = document.getElementById('receipt-raw-text');
-        if (textArea) textArea.value = rawText.trim();
-
-        if (rawText.trim()) {
-          parseReceiptTextToForm(rawText);
-          showToast('OCR読取が完了しました', 'success');
-        } else {
-          showToast('文字を検出できませんでした', 'warning');
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new Error(`API Error (${response.status}): ${errBody}`);
         }
-      } catch {
-        showToast('OCR解析に失敗しました', 'error');
+
+        const result = await response.json();
+        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) throw new Error('AIから有効な応答が返りませんでした');
+
+        const parsed = JSON.parse(jsonText);
+        if (pctEl) pctEl.textContent = '100%';
+        if (barEl) barEl.style.width = '100%';
+        if (statusEl) statusEl.textContent = 'AI解析完了！';
+
+        const validDate = sanitizeDate(parsed.date);
+        if (validDate) document.getElementById('form-date').value = validDate;
+
+        const cleanStore = sanitizeText(parsed.store, 80);
+        if (cleanStore) document.getElementById('form-store').value = cleanStore;
+
+        if (parsed.payment) {
+          const matchedPay = appState.payments.find((p) => parsed.payment.includes(p) || p.includes(parsed.payment));
+          if (matchedPay) document.getElementById('form-payment').value = matchedPay;
+        }
+
+        const items = Array.isArray(parsed.items) ? parsed.items : [];
+        if (items.length === 0) {
+          showToast('AIで商品明細を検出できませんでした', 'warning');
+          return;
+        }
+
+        const container = document.getElementById('item-rows-container');
+        container.innerHTML = '';
+        for (const itm of items) {
+          addItemRow({
+            name: sanitizeText(itm.name, 100, '商品'),
+            price: sanitizePositiveInt(itm.price, 0),
+            majorId: itm.majorId,
+            mediumId: itm.mediumId,
+            minorId: itm.minorId
+          });
+        }
+        updateFormTotal();
+        showToast(`Gemini AIが${items.length}点の商品を解析・自動分類しました`, 'success');
+      } catch (err) {
+        console.error('Gemini解析エラー:', err);
+        showToast('Gemini AI解析に失敗しました。APIキーや通信状況を確認してください。', 'error');
       } finally {
-        if (runBtn) runBtn.disabled = false;
+        if (aiBtn) aiBtn.disabled = false;
       }
     }
 
@@ -2007,7 +2203,7 @@
     }
 
     function switchMasterTab(tabName) {
-      ['categories', 'stores', 'payments', 'icon'].forEach((t) => {
+      ['categories', 'stores', 'payments', 'ai', 'icon'].forEach((t) => {
         const btn = document.getElementById(`m-tab-${t}`);
         const pane = document.getElementById(`master-pane-${t}`);
         if (btn) btn.classList.toggle('tab-pill-active', t === tabName);
@@ -2016,6 +2212,7 @@
       if (tabName === 'categories') renderMasterCategories();
       if (tabName === 'stores') renderMasterStores();
       if (tabName === 'payments') renderMasterPayments();
+      if (tabName === 'ai') updateGeminiKeyStatusUI();
     }
 
     function renderMasterCategories() {
@@ -2383,6 +2580,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       initAppIcon();
       loadState();
+      updateGeminiKeyStatusUI();
       setupDelegatedEvents();
       setTodayMonth();
       resetReceiptForm();
