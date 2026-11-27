@@ -9,21 +9,15 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#2563eb">
   <title>スマート家計簿 Pro Mobile - スマホ版</title>
-  <!-- ホーム画面ショートカット用アイコン（JSで動的更新） -->
   <link id="apple-touch-icon-link" rel="apple-touch-icon" sizes="180x180" href="">
   <link id="favicon-link" rel="icon" type="image/png" href="">
   <link id="web-manifest-link" rel="manifest" href="">
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Noto Sans JP -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Tesseract.js (ブラウザ内OCRエンジン) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <script>
@@ -101,7 +95,6 @@
         <h1 class="text-sm font-bold text-slate-800 tracking-tight">スマート家計簿 <span class="text-brand-600">Mobile</span></h1>
       </div>
 
-      <!-- データ管理メニュー（クリック開閉） -->
       <div id="data-menu-container" class="relative">
         <button type="button" id="data-menu-btn" onclick="toggleDataMenu(event)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 active:bg-slate-200 text-slate-700 flex items-center gap-1.5">
           <i class="fa-solid fa-database text-emerald-600"></i>
@@ -130,17 +123,16 @@
       </div>
     </div>
 
-    <!-- 共通の年月セレクターバー（集計・履歴タブで表示） -->
     <div id="month-selector-bar" class="max-w-lg mx-auto px-3.5 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
       <div class="flex items-center gap-1.5">
-        <button type="button" onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 active:bg-slate-100" aria-label="前月">
+        <button type="button" onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 active:bg-slate-100">
           <i class="fa-solid fa-chevron-left text-xs"></i>
         </button>
         <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
           <i class="fa-regular fa-calendar text-brand-600 text-xs"></i>
           <input type="month" id="current-month-picker" onchange="onMonthPickerChange(this.value)" class="bg-transparent font-bold text-xs text-slate-800 focus:outline-none">
         </div>
-        <button type="button" onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 active:bg-slate-100" aria-label="翌月">
+        <button type="button" onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 active:bg-slate-100">
           <i class="fa-solid fa-chevron-right text-xs"></i>
         </button>
         <button type="button" onclick="setTodayMonth()" class="px-2 py-1 text-[11px] font-bold text-brand-600 bg-brand-50 rounded-lg active:bg-brand-100">
@@ -154,14 +146,11 @@
     </div>
   </header>
 
-  <!-- メインビューコンテナ（4画面切り替え） -->
+  <!-- メインビューコンテナ -->
   <main class="max-w-lg mx-auto px-3 pt-3 pb-24">
 
-    <!-- =========================================================
-         VIEW 1: 月次3階層集計＆グラフ画面
-         ========================================================= -->
+    <!-- VIEW 1: 集計画面 -->
     <section id="view-summary" class="space-y-3.5">
-      <!-- KPIカード -->
       <div class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-4 text-white shadow-sm">
         <div class="flex items-center justify-between">
           <div>
@@ -177,7 +166,6 @@
         </div>
       </div>
 
-      <!-- 3階層カテゴリー集計アコーディオン -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
         <div class="px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -196,7 +184,6 @@
         <div id="category-hierarchy-container" class="p-3 space-y-2"></div>
       </div>
 
-      <!-- 大分類ドーナツグラフ -->
       <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs">
         <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
           <i class="fa-solid fa-chart-pie text-brand-600"></i> 大分類 構成比グラフ
@@ -207,7 +194,6 @@
         </div>
       </div>
 
-      <!-- 支払方法別集計 -->
       <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs">
         <h3 class="text-xs font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
           <i class="fa-regular fa-credit-card text-brand-600"></i> 支払方法別 集計
@@ -216,11 +202,8 @@
       </div>
     </section>
 
-    <!-- =========================================================
-         VIEW 2: 購入履歴一覧（検索・絞り込み・編集・削除）
-         ========================================================= -->
+    <!-- VIEW 2: 購入履歴一覧 -->
     <section id="view-history" class="hidden space-y-3">
-      <!-- 検索・絞り込みカード -->
       <div class="bg-white rounded-2xl border border-slate-200 p-3 space-y-2 shadow-2xs">
         <div class="relative">
           <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-3 top-1/2 -translate-y-1/2"></i>
@@ -244,16 +227,13 @@
       <div id="receipt-history-list" class="space-y-2.5"></div>
     </section>
 
-    <!-- =========================================================
-         VIEW 3: 購入登録＆カメラ・レシートOCR読込画面
-         ========================================================= -->
+    <!-- VIEW 3: 購入登録＆カメラ・レシートOCR読込画面 -->
     <section id="view-entry" class="hidden space-y-3.5">
-      <!-- レシート読込・カメラ撮影カード -->
       <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
         <div class="px-3.5 py-2.5 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-camera text-indigo-600"></i>
-            <span class="text-xs font-bold text-slate-800">レシートカメラ撮影・OCR自動入力</span>
+            <span class="text-xs font-bold text-slate-800">レシートカメラ撮影・AI自動入力</span>
           </div>
           <button type="button" onclick="toggleTextPasteBox()" class="text-[11px] font-bold text-indigo-600 underline">
             テキスト貼付
@@ -261,7 +241,6 @@
         </div>
 
         <div class="p-3 space-y-2.5">
-          <!-- カメラ撮影＆アルバム選択ボタン -->
           <div class="grid grid-cols-2 gap-2">
             <button type="button" onclick="startReceiptCamera()" class="py-3 px-3 bg-indigo-600 active:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs">
               <i class="fa-solid fa-camera text-sm"></i>
@@ -296,13 +275,13 @@
               </button>
               <button type="button" onclick="captureReceiptPhoto()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 active:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-camera"></i>
-                <span>シャッターを切る（OCR解析）</span>
+                <span>シャッターを切る（解析実行）</span>
               </button>
             </div>
           </div>
           <canvas id="camera-capture-canvas" class="hidden"></canvas>
 
-          <!-- 撮影済み静止画プレビュー＆OCR進捗 -->
+          <!-- 撮影済み静止画プレビュー＆解析進捗 -->
           <div id="receipt-preview-wrapper" class="hidden space-y-2 pt-1">
             <div class="relative max-h-52 overflow-auto rounded-xl border border-slate-200 bg-slate-900/5">
               <img id="receipt-preview-img" src="" alt="レシートプレビュー" class="mx-auto max-h-52 object-contain">
@@ -313,7 +292,7 @@
             <div class="flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-2 rounded-xl border border-slate-200">
               <label class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
                 <input type="checkbox" id="ocr-enhance-contrast" checked class="rounded text-indigo-600">
-                <span>文字くっきり補正</span>
+                <span>文字くっきり補正（標準OCR用）</span>
               </label>
               <button type="button" onclick="retakeReceiptCamera()" class="text-indigo-600 font-bold">
                 <i class="fa-solid fa-rotate-right mr-0.5"></i>撮り直す
@@ -331,18 +310,19 @@
             <div class="flex items-center justify-between text-[10px] text-slate-500 px-1">
               <span id="gemini-key-status-badge">Gemini APIキー: 未設定</span>
               <button type="button" onclick="openAiKeySettingsFromEntry()" class="text-brand-600 font-bold underline">
-                APIキー設定
+                APIキー・モデル設定
               </button>
             </div>
             <div id="ocr-progress-box" class="hidden">
               <div class="flex justify-between text-[10px] text-indigo-700 font-bold mb-1">
-                <span id="ocr-status-text">OCR処理中...</span>
+                <span id="ocr-status-text">処理中...</span>
                 <span id="ocr-percent-text">0%</span>
               </div>
               <div class="w-full bg-indigo-100 rounded-full h-1.5">
                 <div id="ocr-progress-bar" class="bg-indigo-600 h-1.5 rounded-full transition-all" style="width: 0%"></div>
               </div>
             </div>
+            <div id="ai-error-detail-box" class="hidden text-left bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-[11px] text-rose-700 break-all"></div>
           </div>
 
           <!-- テキスト貼り付け解析ボックス -->
@@ -373,7 +353,6 @@
 
         <input type="hidden" id="editing-receipt-id" value="">
 
-        <!-- 日付・支払方法 -->
         <div class="grid grid-cols-2 gap-2.5">
           <div>
             <label class="block text-[11px] font-bold text-slate-600 mb-1">購入日 *</label>
@@ -388,7 +367,6 @@
           </div>
         </div>
 
-        <!-- 購入先 -->
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="text-[11px] font-bold text-slate-600">購入先（店舗名） *</label>
@@ -398,7 +376,6 @@
           <datalist id="store-datalist"></datalist>
         </div>
 
-        <!-- 商品明細行リスト -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-700">購入商品リスト (<span id="form-item-count">0</span>点)</span>
@@ -409,13 +386,11 @@
           <div id="item-rows-container" class="space-y-2.5"></div>
         </div>
 
-        <!-- メモ -->
         <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">メモ（任意）</label>
           <input type="text" id="form-memo" placeholder="例：週末のまとめ買い" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white">
         </div>
 
-        <!-- 合計金額＆登録ボタン -->
         <div class="pt-2 border-t border-slate-100 space-y-2.5">
           <div class="flex items-center justify-between px-1">
             <span class="text-xs font-bold text-slate-600">合計金額</span>
@@ -429,11 +404,8 @@
       </form>
     </section>
 
-    <!-- =========================================================
-         VIEW 4: マスタ管理＆アイコン設定画面
-         ========================================================= -->
+    <!-- VIEW 4: マスタ管理＆AI・アイコン設定画面 -->
     <section id="view-master" class="hidden space-y-3.5">
-      <!-- サブタブ切り替えピル -->
       <div class="bg-white p-1.5 rounded-2xl border border-slate-200 grid grid-cols-5 gap-1 shadow-2xs">
         <button type="button" id="m-tab-categories" onclick="switchMasterTab('categories')" class="py-2 rounded-xl text-[11px] font-bold text-slate-600 tab-pill-active">
           分類階層
@@ -452,9 +424,8 @@
         </button>
       </div>
 
-      <!-- 1. 分類階層（大・中・小） -->
+      <!-- 1. 分類階層 -->
       <div id="master-pane-categories" class="space-y-3">
-        <!-- 大分類 -->
         <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs">
           <h3 class="text-xs font-bold text-slate-800 mb-2">1. 大分類の選択・追加</h3>
           <div class="flex gap-1.5 mb-2.5">
@@ -464,7 +435,6 @@
           <div id="master-major-list" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
         </div>
 
-        <!-- 中分類 -->
         <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs">
           <h3 class="text-xs font-bold text-slate-800 mb-2">2. 中分類 <span id="selected-major-label" class="text-brand-600"></span></h3>
           <div class="flex gap-1.5 mb-2.5">
@@ -474,7 +444,6 @@
           <div id="master-medium-list" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
         </div>
 
-        <!-- 小分類 -->
         <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs">
           <h3 class="text-xs font-bold text-slate-800 mb-2">3. 小分類 <span id="selected-medium-label" class="text-brand-600"></span></h3>
           <div class="flex gap-1.5 mb-2.5">
@@ -509,24 +478,25 @@
       <div id="master-pane-ai" class="hidden bg-white rounded-2xl border border-slate-200 p-4 space-y-3.5 shadow-2xs">
         <div class="flex items-center gap-2 text-brand-700">
           <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
-          <h3 class="text-xs font-bold text-slate-800">Gemini APIキー設定（AIレシート解析）</h3>
+          <h3 class="text-xs font-bold text-slate-800">Gemini APIキー・使用モデル設定</h3>
         </div>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          Google AI Studio で取得した Gemini APIキーを設定すると、撮影したレシートから<strong>日付・店舗名・正確な商品名・金額・大中小分類の自動仕分け</strong>を一括で高精度に解析できます。キーはスマホのブラウザ内のみに保存されます。
+          Google AI Studio で取得した Gemini APIキーを設定すると、撮影したレシートから<strong>日付・店舗名・正確な商品名・金額・大中小分類の自動仕分け</strong>を一括で高精度に解析できます。
         </p>
         <div>
           <label class="block text-[11px] font-bold text-slate-700 mb-1">Gemini API キー</label>
           <div class="flex gap-1.5">
             <input type="password" id="gemini-api-key-input" placeholder="AIzaSy..." class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl font-mono">
-            <button type="button" onclick="toggleGeminiKeyVisibility()" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs rounded-xl" aria-label="表示切替">
+            <button type="button" onclick="toggleGeminiKeyVisibility()" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs rounded-xl">
               <i class="fa-regular fa-eye"></i>
             </button>
           </div>
         </div>
         <div class="space-y-1.5">
-          <label class="block text-[11px] font-bold text-slate-700">使用モデル（Gemini 4 / Gemini 3 対応）</label>
+          <label class="block text-[11px] font-bold text-slate-700">使用モデル（APIキーの契約ティアに合わせて選択）</label>
           <select id="gemini-model-select" onchange="onGeminiModelSelectChange()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white">
-            <option value="gemini-4-hydrogen">gemini-4-hydrogen（Gemini 4 軽量・高速 / おすすめ）</option>
+            <option value="auto">自動選択（無料枠・有料枠を自動判定して接続 / おすすめ）</option>
+            <option value="gemini-4-hydrogen">gemini-4-hydrogen（Gemini 4 軽量・高速）</option>
             <option value="gemini-4-neon">gemini-4-neon（Gemini 4 バランス型）</option>
             <option value="gemini-4-carbon">gemini-4-carbon（Gemini 4 高精度推論）</option>
             <option value="gemini-3-flash-preview">gemini-3-flash-preview（Gemini 3 Flash）</option>
@@ -535,13 +505,19 @@
           </select>
           <input type="text" id="gemini-custom-model-input" placeholder="例: gemini-4-hydrogen" class="hidden w-full px-3 py-2 text-xs border border-slate-300 rounded-xl font-mono">
         </div>
-        <div class="flex items-center justify-between pt-1">
+        <div id="ai-test-result-box" class="hidden rounded-xl p-2.5 text-[11px]"></div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
           <button type="button" onclick="clearGeminiApiKey()" class="px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 rounded-xl">
-            キーを削除
+            削除
           </button>
-          <button type="button" onclick="saveGeminiApiKey()" class="px-4 py-2 bg-brand-600 active:bg-brand-700 text-white text-xs font-bold rounded-xl">
-            AI設定を保存
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="test-gemini-btn" onclick="testGeminiConnection()" class="px-3 py-2 bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">
+              接続テスト
+            </button>
+            <button type="button" onclick="saveGeminiApiKey()" class="px-4 py-2 bg-brand-600 active:bg-brand-700 text-white text-xs font-bold rounded-xl">
+              AI設定を保存
+            </button>
+          </div>
         </div>
       </div>
 
@@ -557,20 +533,18 @@
           </div>
         </div>
 
-        <!-- テーマカラー選択 -->
         <div>
           <label class="block text-[11px] font-bold text-slate-700 mb-2">1. 背景カラーを選ぶ</label>
           <div class="grid grid-cols-6 gap-2" id="icon-color-presets">
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#2563eb' })" class="h-9 rounded-xl bg-blue-600 ring-2 ring-offset-1 ring-transparent focus:ring-slate-400" aria-label="ブルー"></button>
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#10b981' })" class="h-9 rounded-xl bg-emerald-500" aria-label="グリーン"></button>
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#f59e0b' })" class="h-9 rounded-xl bg-amber-500" aria-label="オレンジ"></button>
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#ec4899' })" class="h-9 rounded-xl bg-pink-500" aria-label="ピンク"></button>
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#7c3aed' })" class="h-9 rounded-xl bg-violet-600" aria-label="パープル"></button>
-            <button type="button" onclick="updatePresetAppIcon({ bg: '#1e293b' })" class="h-9 rounded-xl bg-slate-800" aria-label="ダーク"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#2563eb' })" class="h-9 rounded-xl bg-blue-600"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#10b981' })" class="h-9 rounded-xl bg-emerald-500"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#f59e0b' })" class="h-9 rounded-xl bg-amber-500"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#ec4899' })" class="h-9 rounded-xl bg-pink-500"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#7c3aed' })" class="h-9 rounded-xl bg-violet-600"></button>
+            <button type="button" onclick="updatePresetAppIcon({ bg: '#1e293b' })" class="h-9 rounded-xl bg-slate-800"></button>
           </div>
         </div>
 
-        <!-- マーク（絵文字）選択 -->
         <div>
           <label class="block text-[11px] font-bold text-slate-700 mb-2">2. 中央のマークを選ぶ</label>
           <div class="grid grid-cols-6 gap-2">
@@ -583,7 +557,6 @@
           </div>
         </div>
 
-        <!-- 好きな画像ファイルから設定 -->
         <div class="pt-1">
           <label class="block text-[11px] font-bold text-slate-700 mb-2">3. スマホ内の画像・写真から設定</label>
           <button type="button" onclick="document.getElementById('custom-app-icon-input').click()" class="w-full py-2.5 px-3 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold flex items-center justify-center gap-2">
@@ -593,18 +566,17 @@
           <input type="file" id="custom-app-icon-input" accept="image/*" class="hidden" onchange="handleCustomAppIconUpload(event)">
         </div>
 
-        <!-- 手順ガイド -->
         <div class="bg-blue-50/80 border border-blue-100 rounded-xl p-3 text-[11px] text-slate-700 space-y-1">
           <div class="font-bold text-brand-700"><i class="fa-solid fa-mobile-screen-button mr-1"></i>ホーム画面への追加手順</div>
           <div>・<strong>iPhone (Safari)</strong>：画面下の共有ボタン <i class="fa-solid fa-arrow-up-from-bracket"></i> →「ホーム画面に追加」</div>
-          <div>・<strong>Android (Chrome)</strong>：右上の「︙」メニュー →「ホーム画面に追加」または「アプリをインストール」</div>
+          <div>・<strong>Android (Chrome)</strong>：右上の「︙」メニュー →「ホーム画面に追加」</div>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- 下部固定タブバー（片手操作最適化・4タブ） -->
+  <!-- 下部固定タブバー -->
   <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-30 safe-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
     <div class="max-w-lg mx-auto grid grid-cols-4 h-14">
       <button type="button" id="nav-summary" onclick="switchMobileView('summary')" class="flex flex-col items-center justify-center gap-0.5 text-brand-600 font-bold">
@@ -633,7 +605,12 @@
     const STORAGE_KEY = 'smart_kakeibo_pro_v1';
     const GEMINI_KEY_STORAGE = 'smart_kakeibo_gemini_api_key_v1';
     const GEMINI_MODEL_STORAGE = 'smart_kakeibo_gemini_model_v1';
-    const DEFAULT_GEMINI_MODEL = 'gemini-4-hydrogen';
+    const DEFAULT_GEMINI_MODEL = 'auto';
+    const FALLBACK_MODELS = [
+      'gemini-4-hydrogen',
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash'
+    ];
     const ICON_STORAGE_KEY = 'smart_kakeibo_custom_icon_v1';
     const MAX_STRING_LEN = 120;
     const MAX_MEMO_LEN = 500;
@@ -814,12 +791,7 @@
     // =========================================================================
     // 2. ホーム画面ショートカットアイコン生成・カスタマイズ機能
     // =========================================================================
-    let iconConfig = {
-      mode: 'preset',
-      bg: '#2563eb',
-      emoji: '👛',
-      customDataUrl: ''
-    };
+    let iconConfig = { mode: 'preset', bg: '#2563eb', emoji: '👛', customDataUrl: '' };
 
     function generatePresetIconDataUrl(bgColor = '#2563eb', emoji = '👛', size = 512) {
       const canvas = document.createElement('canvas');
@@ -827,33 +799,25 @@
       canvas.height = size;
       const ctx = canvas.getContext('2d');
 
-      // 背景グラデーション（iOSでは自動で角丸マスクされるため全面塗りつぶし）
-      const grad = ctx.createLinearGradient(0, 0, size, size);
-      grad.addColorStop(0, bgColor);
-      grad.addColorStop(1, '#0f172a');
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, size, size);
 
-      // やわらかい光のハイライト
       const radial = ctx.createRadialGradient(size * 0.25, size * 0.2, size * 0.05, size * 0.5, size * 0.5, size * 0.85);
       radial.addColorStop(0, 'rgba(255,255,255,0.28)');
       radial.addColorStop(1, 'rgba(0,0,0,0.18)');
       ctx.fillStyle = radial;
       ctx.fillRect(0, 0, size, size);
 
-      // 中央の白い円バッジ
       ctx.beginPath();
       ctx.arc(size / 2, size * 0.46, size * 0.27, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
       ctx.fill();
 
-      // 絵文字マーク描画
       ctx.font = `${Math.round(size * 0.30)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(emoji, size / 2, size * 0.475);
 
-      // 下部ラベル
       ctx.fillStyle = '#ffffff';
       ctx.font = `bold ${Math.round(size * 0.115)}px "Noto Sans JP", sans-serif`;
       ctx.fillText('家計簿', size / 2, size * 0.855);
@@ -872,7 +836,6 @@
       if (headerImg) headerImg.src = dataUrl;
       if (previewImg) previewImg.src = dataUrl;
 
-      // 動的Web App Manifest（Android Chromeのホーム画面追加アイコン対応）
       const manifestLink = document.getElementById('web-manifest-link');
       if (manifestLink) {
         const manifestObj = {
@@ -887,8 +850,7 @@
             { src: dataUrl, sizes: '512x512', type: 'image/png' }
           ]
         };
-        const jsonStr = JSON.stringify(manifestObj);
-        manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(jsonStr);
+        manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj));
       }
     }
 
@@ -897,17 +859,14 @@
         const saved = localStorage.getItem(ICON_STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') {
-            iconConfig = { ...iconConfig, ...parsed };
-          }
+          if (parsed && typeof parsed === 'object') iconConfig = { ...iconConfig, ...parsed };
         }
       } catch {}
 
       if (iconConfig.mode === 'custom' && iconConfig.customDataUrl) {
         applyAppIconDataUrl(iconConfig.customDataUrl);
       } else {
-        const url = generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512);
-        applyAppIconDataUrl(url);
+        applyAppIconDataUrl(generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512));
       }
     }
 
@@ -918,13 +877,8 @@
     }
 
     function updatePresetAppIcon(partial) {
-      iconConfig = {
-        ...iconConfig,
-        ...partial,
-        mode: 'preset'
-      };
-      const url = generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512);
-      applyAppIconDataUrl(url);
+      iconConfig = { ...iconConfig, ...partial, mode: 'preset' };
+      applyAppIconDataUrl(generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512));
       saveIconConfig();
       showToast('ショートカット用アイコンを更新しました', 'success');
     }
@@ -936,7 +890,6 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          // 512x512の正方形PNGにセンタークロップして軽量化
           const size = 512;
           const canvas = document.createElement('canvas');
           canvas.width = size;
@@ -948,11 +901,7 @@
           ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
 
           const dataUrl = canvas.toDataURL('image/png');
-          iconConfig = {
-            ...iconConfig,
-            mode: 'custom',
-            customDataUrl: dataUrl
-          };
+          iconConfig = { ...iconConfig, mode: 'custom', customDataUrl: dataUrl };
           applyAppIconDataUrl(dataUrl);
           saveIconConfig();
           showToast('カスタム画像をアイコンに設定しました', 'success');
@@ -1059,14 +1008,7 @@
             }
           }
           if (items.length > 0) {
-            receipts.push({
-              id: sanitizeText(rec.id, 60, uid('rec')),
-              date,
-              store,
-              payment,
-              memo,
-              items
-            });
+            receipts.push({ id: sanitizeText(rec.id, 60, uid('rec')), date, store, payment, memo, items });
           }
         }
       }
@@ -1115,14 +1057,9 @@
       });
 
       const monthBar = document.getElementById('month-selector-bar');
-      if (monthBar) {
-        monthBar.classList.toggle('hidden', viewName === 'entry' || viewName === 'master');
-      }
+      if (monthBar) monthBar.classList.toggle('hidden', viewName === 'entry' || viewName === 'master');
 
-      if (viewName !== 'entry') {
-        stopReceiptCamera();
-      }
-
+      if (viewName !== 'entry') stopReceiptCamera();
       if (viewName === 'summary') renderDashboard();
       if (viewName === 'history') renderHistory();
       if (viewName === 'master') initMasterView();
@@ -1149,7 +1086,7 @@
       setTimeout(() => {
         el.style.opacity = '0';
         setTimeout(() => el.remove(), 220);
-      }, 2400);
+      }, 3000);
     }
 
     function showConfirm(title, message, okLabel = '実行する') {
@@ -1206,7 +1143,7 @@
     }
 
     // =========================================================================
-    // 5. 月次集計（大・中・小分類）・グラフ・支払方法別集計
+    // 5. 月次集計・グラフ・支払方法別集計
     // =========================================================================
     function setTodayMonth() {
       const now = new Date();
@@ -1224,10 +1161,7 @@
 
     function changeMonth(delta) {
       const [y, m] = (currentMonth || '').split('-').map(Number);
-      if (!y || !m) {
-        setTodayMonth();
-        return;
-      }
+      if (!y || !m) { setTodayMonth(); return; }
       const d = new Date(y, m - 1 + delta, 1);
       currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const picker = document.getElementById('current-month-picker');
@@ -1485,7 +1419,7 @@
     }
 
     // =========================================================================
-    // 6. 購入履歴一覧（検索・絞り込み・編集・削除）
+    // 6. 購入履歴一覧
     // =========================================================================
     function renderHistory() {
       const listEl = document.getElementById('receipt-history-list');
@@ -1563,13 +1497,11 @@
     }
 
     // =========================================================================
-    // 7. 購入登録フォーム（3階層連動・編集・保存）
+    // 7. 購入登録フォーム
     // =========================================================================
     function populateMasterSelects() {
       const storeDatalist = document.getElementById('store-datalist');
-      if (storeDatalist) {
-        storeDatalist.innerHTML = appState.stores.map((s) => `<option value="${escapeAttr(s)}"></option>`).join('');
-      }
+      if (storeDatalist) storeDatalist.innerHTML = appState.stores.map((s) => `<option value="${escapeAttr(s)}"></option>`).join('');
       const paySelect = document.getElementById('form-payment');
       if (paySelect) {
         const cur = paySelect.value;
@@ -1725,8 +1657,7 @@
     }
 
     async function deleteReceipt(receiptId) {
-      const ok = await showConfirm('購入履歴の削除', 'この購入履歴を削除しますか？', '削除する');
-      if (!ok) return;
+      if (!(await showConfirm('購入履歴の削除', 'この購入履歴を削除しますか？', '削除する'))) return;
       appState.receipts = appState.receipts.filter((r) => r.id !== receiptId);
       saveState();
       renderAll();
@@ -1783,11 +1714,40 @@
     }
 
     // =========================================================================
-    // 8. カメラ撮影＆OCR＆テキスト解析
+    // 8. カメラ撮影＆画像変換＆Gemini AI＆標準OCR＆テキスト解析
     // =========================================================================
+    function buildEnhancedCanvasFromImage(imgEl, enhanceContrast = false) {
+      const maxDim = 1600;
+      const origW = imgEl.naturalWidth || imgEl.width || 800;
+      const origH = imgEl.naturalHeight || imgEl.height || 1000;
+      const scale = Math.min(1, maxDim / Math.max(origW, origH));
+      const w = Math.max(1, Math.round(origW * scale));
+      const h = Math.max(1, Math.round(origH * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(imgEl, 0, 0, w, h);
+
+      if (enhanceContrast) {
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const factor = 1.45;
+        for (let i = 0; i < d.length; i += 4) {
+          const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          const contrasted = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
+          d[i] = d[i + 1] = d[i + 2] = contrasted;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+      return canvas;
+    }
+
     function toggleTextPasteBox() {
-      const box = document.getElementById('text-paste-box');
-      if (box) box.classList.toggle('hidden');
+      document.getElementById('text-paste-box')?.classList.toggle('hidden');
     }
 
     function handleReceiptImageUpload(event) {
@@ -1802,18 +1762,22 @@
     function setPreviewImageDataUrl(dataUrl) {
       const img = document.getElementById('receipt-preview-img');
       const wrapper = document.getElementById('receipt-preview-wrapper');
+      const errBox = document.getElementById('ai-error-detail-box');
       if (!img || !wrapper) return;
       img.src = dataUrl;
       wrapper.classList.remove('hidden');
+      if (errBox) errBox.classList.add('hidden');
     }
 
     function clearReceiptImage() {
       const img = document.getElementById('receipt-preview-img');
       const wrapper = document.getElementById('receipt-preview-wrapper');
       const progBox = document.getElementById('ocr-progress-box');
+      const errBox = document.getElementById('ai-error-detail-box');
       if (img) img.src = '';
       if (wrapper) wrapper.classList.add('hidden');
       if (progBox) progBox.classList.add('hidden');
+      if (errBox) errBox.classList.add('hidden');
     }
 
     async function startReceiptCamera(specificDeviceId = null) {
@@ -1891,8 +1855,62 @@
       }
     }
 
+    async function runReceiptOCR() {
+      const imgEl = document.getElementById('receipt-preview-img');
+      if (!imgEl || !imgEl.src) {
+        showToast('先にレシート画像を選択または撮影してください', 'warning');
+        return;
+      }
+      if (typeof Tesseract === 'undefined') {
+        showToast('OCRライブラリの読み込み中です', 'warning');
+        return;
+      }
+
+      const ocrBtn = document.getElementById('run-ocr-btn');
+      const progBox = document.getElementById('ocr-progress-box');
+      const statusEl = document.getElementById('ocr-status-text');
+      const pctEl = document.getElementById('ocr-percent-text');
+      const barEl = document.getElementById('ocr-progress-bar');
+
+      try {
+        if (ocrBtn) ocrBtn.disabled = true;
+        if (progBox) progBox.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = '標準OCRエンジン準備中...';
+        if (pctEl) pctEl.textContent = '10%';
+        if (barEl) barEl.style.width = '10%';
+
+        const enhance = Boolean(document.getElementById('ocr-enhance-contrast')?.checked);
+        const canvas = buildEnhancedCanvasFromImage(imgEl, enhance);
+
+        const result = await Tesseract.recognize(canvas, 'jpn+eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+              const pct = Math.round(m.progress * 100);
+              if (statusEl) statusEl.textContent = '文字認識中...';
+              if (pctEl) pctEl.textContent = `${pct}%`;
+              if (barEl) barEl.style.width = `${pct}%`;
+            }
+          }
+        });
+
+        const text = result?.data?.text || '';
+        const ta = document.getElementById('receipt-raw-text');
+        if (ta) ta.value = text;
+        if (!text.trim()) {
+          showToast('文字を読み取れませんでした', 'warning');
+          return;
+        }
+        parseReceiptTextToForm(text);
+      } catch (err) {
+        console.error('標準OCRエラー:', err);
+        showToast('標準OCR解析中にエラーが発生しました', 'error');
+      } finally {
+        if (ocrBtn) ocrBtn.disabled = false;
+      }
+    }
+
     // =========================================================================
-    // 8-B. Gemini APIキー管理＆AIレシート画像解析
+    // 8-B. Gemini APIキー・モデル設定＆AIレシート画像解析
     // =========================================================================
     function getGeminiApiKey() {
       try {
@@ -1926,13 +1944,12 @@
       const customInput = document.getElementById('gemini-custom-model-input');
 
       if (badge) {
+        const modelLabel = model === 'auto' ? '自動選択' : model;
         badge.innerHTML = key
-          ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-0.5"></i>AI設定済 (${escapeHtml(model)})</span>`
+          ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-0.5"></i>AI設定済 (${escapeHtml(modelLabel)})</span>`
           : `<span class="text-slate-400">Gemini APIキー: 未設定</span>`;
       }
-      if (input && key) {
-        input.value = key;
-      }
+      if (input && key) input.value = key;
       if (sel) {
         const hasOption = Array.from(sel.options).some((o) => o.value === model && o.value !== 'custom');
         if (hasOption) {
@@ -1970,30 +1987,10 @@
         localStorage.setItem(GEMINI_KEY_STORAGE, val);
         localStorage.setItem(GEMINI_MODEL_STORAGE, selectedModel);
         updateGeminiKeyStatusUI();
-        showToast(`AI設定（${selectedModel}）を保存しました`, 'success');
+        const label = selectedModel === 'auto' ? '自動選択' : selectedModel;
+        showToast(`AI設定（${label}）を保存しました`, 'success');
       } catch {
         showToast('AI設定の保存に失敗しました', 'error');
-      }
-    }
-
-    function openAiKeySettingsFromEntry() {
-      switchMobileView('master');
-      switchMasterTab('ai');
-    }
-
-    function saveGeminiApiKey() {
-      const input = document.getElementById('gemini-api-key-input');
-      const val = (input?.value || '').trim();
-      if (!val) {
-        showToast('APIキーを入力してください', 'warning');
-        return;
-      }
-      try {
-        localStorage.setItem(GEMINI_KEY_STORAGE, val);
-        updateGeminiKeyStatusUI();
-        showToast('Gemini APIキーを保存しました', 'success');
-      } catch {
-        showToast('APIキーの保存に失敗しました', 'error');
       }
     }
 
@@ -2013,6 +2010,91 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
+    async function callGeminiWithFallback(apiKey, payload, preferredModel) {
+      const candidates = preferredModel === 'auto'
+        ? [...FALLBACK_MODELS]
+        : [preferredModel, ...FALLBACK_MODELS.filter((m) => m !== preferredModel)];
+
+      let lastErrorMessage = '';
+      for (const modelName of candidates) {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            return { data, usedModel: modelName };
+          }
+
+          let errDetail = '';
+          try {
+            const errJson = await response.json();
+            errDetail = errJson?.error?.message || JSON.stringify(errJson);
+          } catch {
+            errDetail = await response.text();
+          }
+          lastErrorMessage = `[${modelName}] HTTP ${response.status}: ${errDetail}`;
+
+          if (errDetail.toLowerCase().includes('api key not valid')) {
+            throw new Error(lastErrorMessage);
+          }
+        } catch (netErr) {
+          lastErrorMessage = netErr.message || String(netErr);
+          if (lastErrorMessage.toLowerCase().includes('api key not valid')) {
+            throw netErr;
+          }
+        }
+      }
+      throw new Error(lastErrorMessage || 'すべてのモデルで接続に失敗しました');
+    }
+
+    async function testGeminiConnection() {
+      const input = document.getElementById('gemini-api-key-input');
+      const sel = document.getElementById('gemini-model-select');
+      const customInput = document.getElementById('gemini-custom-model-input');
+      const resBox = document.getElementById('ai-test-result-box');
+      const btn = document.getElementById('test-gemini-btn');
+
+      const apiKey = (input?.value || getGeminiApiKey()).trim();
+      const preferredModel = sel?.value === 'custom'
+        ? sanitizeText(customInput?.value || '', 80, DEFAULT_GEMINI_MODEL)
+        : (sel?.value || getGeminiModel());
+
+      if (!apiKey) {
+        showToast('先にGemini APIキーを入力してください', 'warning');
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (resBox) {
+        resBox.className = 'rounded-xl p-2.5 text-[11px] bg-slate-100 text-slate-700';
+        resBox.textContent = '接続テスト中...';
+        resBox.classList.remove('hidden');
+      }
+
+      try {
+        const testPayload = {
+          contents: [{ role: 'user', parts: [{ text: 'OKとだけ返答してください。' }] }]
+        };
+        const { usedModel } = await callGeminiWithFallback(apiKey, testPayload, preferredModel);
+        if (resBox) {
+          resBox.className = 'rounded-xl p-2.5 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold';
+          resBox.textContent = `接続成功！使用可能モデル: ${usedModel}`;
+        }
+      } catch (err) {
+        if (resBox) {
+          resBox.className = 'rounded-xl p-2.5 text-[11px] bg-rose-50 border border-rose-200 text-rose-700 break-all';
+          resBox.textContent = `接続失敗: ${err.message}`;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     function buildCategoryHierarchyPromptText() {
       const lines = [];
       for (const maj of appState.categories) {
@@ -2023,18 +2105,6 @@
         }
       }
       return lines.join('\n');
-    }
-
-    async function fetchWithRetry(url, options, maxRetries = 3) {
-      let delay = 1000;
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const res = await fetch(url, options);
-        if (res.ok || (res.status !== 429 && res.status < 500) || attempt === maxRetries) {
-          return res;
-        }
-        await new Promise((r) => setTimeout(r, delay));
-        delay *= 2;
-      }
     }
 
     async function runGeminiReceiptAnalysis() {
@@ -2056,6 +2126,9 @@
       const statusEl = document.getElementById('ocr-status-text');
       const pctEl = document.getElementById('ocr-percent-text');
       const barEl = document.getElementById('ocr-progress-bar');
+      const errBox = document.getElementById('ai-error-detail-box');
+
+      if (errBox) errBox.classList.add('hidden');
 
       try {
         if (aiBtn) aiBtn.disabled = true;
@@ -2117,27 +2190,19 @@ ${categoryListText}`;
             }
           }
         };
-        const modelName = getGeminiModel();
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const response = await fetchWithRetry(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
 
-        if (!response.ok) {
-          const errBody = await response.text();
-          throw new Error(`API Error (${response.status}): ${errBody}`);
-        }
+        const preferredModel = getGeminiModel();
+        const { data: result, usedModel } = await callGeminiWithFallback(apiKey, payload, preferredModel);
 
-        const result = await response.json();
-        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!jsonText) throw new Error('AIから有効な応答が返りませんでした');
+        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error('AIから有効な応答テキストが返りませんでした');
 
-        const parsed = JSON.parse(jsonText);
+        const cleanedJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        const parsed = JSON.parse(cleanedJson);
+
         if (pctEl) pctEl.textContent = '100%';
         if (barEl) barEl.style.width = '100%';
-        if (statusEl) statusEl.textContent = 'AI解析完了！';
+        if (statusEl) statusEl.textContent = `AI解析完了 (${usedModel})`;
 
         const validDate = sanitizeDate(parsed.date);
         if (validDate) document.getElementById('form-date').value = validDate;
@@ -2168,10 +2233,15 @@ ${categoryListText}`;
           });
         }
         updateFormTotal();
-        showToast(`Gemini AIが${items.length}点の商品を解析・自動分類しました`, 'success');
+        showToast(`Gemini AI (${usedModel}) が${items.length}点の商品を解析・自動分類しました`, 'success');
       } catch (err) {
         console.error('Gemini解析エラー:', err);
-        showToast('Gemini AI解析に失敗しました。APIキーや通信状況を確認してください。', 'error');
+        if (progBox) progBox.classList.add('hidden');
+        if (errBox) {
+          errBox.textContent = `詳細エラー: ${err.message}`;
+          errBox.classList.remove('hidden');
+        }
+        showToast('Gemini AI解析に失敗しました。詳細エラーを確認してください。', 'error');
       } finally {
         if (aiBtn) aiBtn.disabled = false;
       }
@@ -2258,7 +2328,7 @@ ${categoryListText}`;
     }
 
     // =========================================================================
-    // 9. マスタ管理画面（分類3階層・購入先・支払方法・アイコン設定）
+    // 9. マスタ管理画面
     // =========================================================================
     function initMasterView() {
       if (!masterSelectedMajorId && appState.categories.length > 0) {
@@ -2328,10 +2398,7 @@ ${categoryListText}`;
 
       const selectedMed = selectedMaj.mediums.find((m) => m.id === masterSelectedMediumId);
       document.getElementById('selected-medium-label').textContent = selectedMed ? `(${selectedMed.name})` : '';
-      if (!selectedMed) {
-        minList.innerHTML = '';
-        return;
-      }
+      if (!selectedMed) { minList.innerHTML = ''; return; }
 
       minList.innerHTML = selectedMed.minors.map((min) => `
         <div class="px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-slate-50 text-slate-700">
@@ -2638,13 +2705,9 @@ ${categoryListText}`;
         } else if (action === 'select-medium') {
           masterSelectedMediumId = target.dataset.id;
           renderMasterCategories();
-        } else if (action === 'rename-cat') {
-          e.stopPropagation();
-          renameCategory(target.dataset.level, target.dataset.id);
-        } else if (action === 'delete-cat') {
-          e.stopPropagation();
-          deleteCategory(target.dataset.level, target.dataset.id);
-        } else if (action === 'rename-store') renameStoreMaster(Number(target.dataset.idx));
+        } else if (action === 'rename-cat') { e.stopPropagation(); renameCategory(target.dataset.level, target.dataset.id); }
+        else if (action === 'delete-cat') { e.stopPropagation(); deleteCategory(target.dataset.level, target.dataset.id); }
+        else if (action === 'rename-store') renameStoreMaster(Number(target.dataset.idx));
         else if (action === 'delete-store') deleteStoreMaster(Number(target.dataset.idx));
         else if (action === 'rename-payment') renamePaymentMaster(Number(target.dataset.idx));
         else if (action === 'delete-payment') deletePaymentMaster(Number(target.dataset.idx));
