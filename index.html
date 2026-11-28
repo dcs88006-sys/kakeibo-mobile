@@ -12,6 +12,16 @@
   <link id="apple-touch-icon-link" rel="apple-touch-icon" sizes="180x180" href="">
   <link id="favicon-link" rel="icon" type="image/png" href="">
   <link id="web-manifest-link" rel="manifest" href="">
+  <script>
+    // Tailwind Play CDN の開発用コンソール警告を抑制
+    (function() {
+      const origWarn = console.warn;
+      console.warn = function(...args) {
+        if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) return;
+        origWarn.apply(console, args);
+      };
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -678,132 +688,192 @@
       return rounded < 0 ? 0 : Math.min(rounded, max);
     }
 
+    function sanitizeSignedInt(val, fallback = 0, min = -100000000, max = 100000000) {
+      const n = Number(val);
+      if (!Number.isFinite(n)) return fallback;
+      const rounded = Math.round(n);
+      return Math.max(min, Math.min(rounded, max));
+    }
+
     function createDefaultData() {
-      const now = new Date();
-      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const d1 = `${yyyy}-${mm}-03`;
+      const d2 = `${yyyy}-${mm}-08`;
+      const d3 = `${yyyy}-${mm}-12`;
 
       const categories = [
         {
-          id: 'maj_food',
+          id: 'cat_food',
           name: '食費',
           mediums: [
             {
-              id: 'med_grocery',
-              name: '生鮮・スーパー食材',
+              id: 'med_groceries',
+              name: '食料品',
               minors: [
-                { id: 'min_veggie', name: '野菜・果物' },
-                { id: 'min_meat', name: '肉・魚介' },
-                { id: 'min_dairy', name: '乳製品・卵・パン' },
-                { id: 'min_seasoning', name: '調味料・乾物' }
+                { id: 'min_veg', name: '野菜・果物' },
+                { id: 'min_meat_fish', name: '肉・魚介' },
+                { id: 'min_dairy_egg', name: '乳製品・卵・豆腐' },
+                { id: 'min_staple', name: '米・パン・麺類' },
+                { id: 'min_seasoning', name: '調味料・油・乾物' },
+                { id: 'min_snack_drink', name: 'お菓子・飲料・お酒' },
+                { id: 'min_deli', name: '惣菜・冷凍食品' }
               ]
             },
             {
-              id: 'med_eating_out',
+              id: 'med_dining',
               name: '外食・カフェ',
               minors: [
                 { id: 'min_lunch', name: 'ランチ・定食' },
-                { id: 'min_cafe', name: 'コーヒー・スイーツ' },
-                { id: 'min_dinner_out', name: 'ディナー・居酒屋' }
+                { id: 'min_dinner', name: 'ディナー・居酒屋' },
+                { id: 'min_cafe', name: 'カフェ・軽食' }
               ]
             }
           ]
         },
         {
-          id: 'maj_daily',
-          name: '日用品・消耗品',
+          id: 'cat_daily',
+          name: '日用品・雑貨',
           mediums: [
             {
-              id: 'med_household',
-              name: '家事・衛生用品',
+              id: 'med_consumables',
+              name: '消耗品',
               minors: [
-                { id: 'min_detergent', name: '洗剤・柔軟剤' },
-                { id: 'min_paper', name: 'ティッシュ・トイレットペーパー' },
-                { id: 'min_bath_toilet', name: 'バス・トイレ用品' }
+                { id: 'min_kitchen_bath', name: '洗剤・キッチン・バス用品' },
+                { id: 'min_paper', name: 'ティッシュ・紙類' },
+                { id: 'min_cosme', name: 'スキンケア・衛生用品' }
               ]
             },
             {
-              id: 'med_health_beauty',
-              name: 'ヘルスケア・美容',
+              id: 'med_goods',
+              name: '生活雑貨',
               minors: [
-                { id: 'min_medicine', name: '医薬品・サプリ' },
-                { id: 'min_cosmetics', name: 'スキンケア・ヘアケア' }
+                { id: 'min_interior', name: '収納・インテリア' },
+                { id: 'min_stationery', name: '文房具・事務用品' }
               ]
             }
           ]
         },
         {
-          id: 'maj_living',
-          name: '住居・光熱・通信',
+          id: 'cat_medical',
+          name: '医療・健康',
           mediums: [
             {
-              id: 'med_utility',
-              name: '水道・光熱費',
+              id: 'med_hospital',
+              name: '病院・薬局',
               minors: [
-                { id: 'min_elec', name: '電気代' },
+                { id: 'min_clinic', name: '診察・治療費' },
+                { id: 'min_medicine', name: '処方薬・市販薬' }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'cat_transport',
+          name: '交通・通信',
+          mediums: [
+            {
+              id: 'med_transit',
+              name: '交通費',
+              minors: [
+                { id: 'min_train_bus', name: '電車・バス・ICチャージ' },
+                { id: 'min_car_gas', name: 'ガソリン・駐車場・高速' }
+              ]
+            },
+            {
+              id: 'med_telecom',
+              name: '通信費',
+              minors: [
+                { id: 'min_mobile', name: '携帯電話・スマホ' },
+                { id: 'min_internet', name: 'インターネット回線' }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'cat_hobby',
+          name: '趣味・娯楽・衣服',
+          mediums: [
+            {
+              id: 'med_hobby_sub',
+              name: '趣味・教養',
+              minors: [
+                { id: 'min_books', name: '書籍・雑誌・音楽' },
+                { id: 'min_leisure', name: 'レジャー・映画・サブスク' }
+              ]
+            },
+            {
+              id: 'med_fashion',
+              name: '衣服・美容',
+              minors: [
+                { id: 'min_clothes', name: '洋服・靴・バッグ' },
+                { id: 'min_salon', name: '美容院・理容室' }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'cat_utility',
+          name: '住居・水道光熱',
+          mediums: [
+            {
+              id: 'med_utilities',
+              name: '水道光熱費',
+              minors: [
+                { id: 'min_electric', name: '電気代' },
                 { id: 'min_gas', name: 'ガス代' },
                 { id: 'min_water', name: '水道代' }
               ]
             },
             {
-              id: 'med_telecom',
-              name: '通信・サブスク',
+              id: 'med_housing',
+              name: '住居費',
               minors: [
-                { id: 'min_mobile', name: '携帯電話・ネット' },
-                { id: 'min_cloud_media', name: '動画・音楽・クラウド' }
-              ]
-            }
-          ]
-        },
-        {
-          id: 'maj_transport',
-          name: '交通・お出かけ',
-          mediums: [
-            {
-              id: 'med_transit',
-              name: '公共交通・車',
-              minors: [
-                { id: 'min_train_bus', name: '電車・バス' },
-                { id: 'min_gasoline_park', name: 'ガソリン・駐車場' }
-              ]
-            },
-            {
-              id: 'med_leisure',
-              name: '娯楽・交際',
-              minors: [
-                { id: 'min_books_hobby', name: '書籍・趣味' },
-                { id: 'min_gift', name: 'プレゼント・交際費' }
+                { id: 'min_rent', name: '家賃・住宅ローン・管理費' }
               ]
             }
           ]
         }
       ];
 
-      const stores = ['ライフ 駅前店', 'イオンモール', 'ウエルシア薬局', 'スターバックス', 'Amazon'];
-      const payments = ['楽天カード', 'PayPay', '現金', '交通系IC (Suica)'];
+      const stores = ['イオン', 'ライフ', '業務スーパー', 'セブン-イレブン', 'ファミリーマート', 'マツモトキヨシ', 'ウエルシア', 'Amazon', '楽天市場', 'スターバックス'];
+      const payments = ['現金', 'クレジットカード', 'PayPay', '交通系IC (Suica等)', 'デビットカード', '口座振替'];
 
       const receipts = [
         {
-          id: uid('rec'),
-          date: `${ym}-03`,
-          store: 'ライフ 駅前店',
-          payment: '楽天カード',
-          memo: '週末のまとめ買い',
+          id: 'rec_sample_1',
+          date: d1,
+          store: 'ライフ',
+          payment: 'クレジットカード',
+          memo: '今週分のまとめ買い',
           items: [
-            { id: uid('itm'), name: '国産豚こま切れ', price: 540, majorId: 'maj_food', mediumId: 'med_grocery', minorId: 'min_meat' },
-            { id: uid('itm'), name: 'キャベツ・トマト', price: 320, majorId: 'maj_food', mediumId: 'med_grocery', minorId: 'min_veggie' },
-            { id: uid('itm'), name: '特濃牛乳', price: 218, majorId: 'maj_food', mediumId: 'med_grocery', minorId: 'min_dairy' },
-            { id: uid('itm'), name: '食器用洗剤つめかえ', price: 258, majorId: 'maj_daily', mediumId: 'med_household', minorId: 'min_detergent' }
+            { id: 'itm_1', name: '国産豚こま切れ 350g', price: 498, majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_meat_fish' },
+            { id: 'itm_2', name: 'キャベツ 1玉', price: 198, majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_veg' },
+            { id: 'itm_3', name: 'おいしい牛乳 1000ml', price: 238, majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_dairy_egg' },
+            { id: 'itm_4', name: '食器用洗剤 詰替特大', price: 328, majorId: 'cat_daily', mediumId: 'med_consumables', minorId: 'min_kitchen_bath' }
           ]
         },
         {
-          id: uid('rec'),
-          date: `${ym}-09`,
-          store: 'スターバックス',
+          id: 'rec_sample_2',
+          date: d2,
+          store: 'マツモトキヨシ',
           payment: 'PayPay',
-          memo: 'カフェ休憩',
+          memo: '日用品と常備薬',
           items: [
-            { id: uid('itm'), name: 'ドリップコーヒー', price: 465, majorId: 'maj_food', mediumId: 'med_eating_out', minorId: 'min_cafe' },
-            { id: uid('itm'), name: 'チーズケーキ', price: 495, majorId: 'maj_food', mediumId: 'med_eating_out', minorId: 'min_cafe' }
+            { id: 'itm_5', name: 'ボックスティッシュ 5箱パック', price: 398, majorId: 'cat_daily', mediumId: 'med_consumables', minorId: 'min_paper' },
+            { id: 'itm_6', name: '総合感冒薬', price: 1280, majorId: 'cat_medical', mediumId: 'med_hospital', minorId: 'min_medicine' }
+          ]
+        },
+        {
+          id: 'rec_sample_3',
+          date: d3,
+          store: 'スターバックス',
+          payment: '交通系IC (Suica等)',
+          memo: '打ち合わせ前の休憩',
+          items: [
+            { id: 'itm_7', name: 'ドリップコーヒー Tall', price: 420, majorId: 'cat_food', mediumId: 'med_dining', minorId: 'min_cafe' },
+            { id: 'itm_8', name: 'ハム＆マリボーチーズ 石窯フィローネ', price: 480, majorId: 'cat_food', mediumId: 'med_dining', minorId: 'min_cafe' }
           ]
         }
       ];
@@ -811,211 +881,66 @@
       return { categories, stores, payments, receipts };
     }
 
-    // =========================================================================
-    // 2. ホーム画面ショートカットアイコン生成・カスタマイズ機能
-    // =========================================================================
-    let iconConfig = { mode: 'preset', bg: '#2563eb', emoji: '👛', customDataUrl: '' };
+    function sanitizeAppState(raw) {
+      const defaults = createDefaultData();
+      if (!raw || typeof raw !== 'object') return defaults;
 
-    function generatePresetIconDataUrl(bgColor = '#2563eb', emoji = '👛', size = 512) {
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, size, size);
-
-      const radial = ctx.createRadialGradient(size * 0.25, size * 0.2, size * 0.05, size * 0.5, size * 0.5, size * 0.85);
-      radial.addColorStop(0, 'rgba(255,255,255,0.28)');
-      radial.addColorStop(1, 'rgba(0,0,0,0.18)');
-      ctx.fillStyle = radial;
-      ctx.fillRect(0, 0, size, size);
-
-      ctx.beginPath();
-      ctx.arc(size / 2, size * 0.46, size * 0.27, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
-      ctx.fill();
-
-      ctx.font = `${Math.round(size * 0.30)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(emoji, size / 2, size * 0.475);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.round(size * 0.115)}px "Noto Sans JP", sans-serif`;
-      ctx.fillText('家計簿', size / 2, size * 0.855);
-
-      return canvas.toDataURL('image/png');
-    }
-
-    function applyAppIconDataUrl(dataUrl) {
-      const appleLink = document.getElementById('apple-touch-icon-link');
-      const favLink = document.getElementById('favicon-link');
-      const headerImg = document.getElementById('header-app-icon-img');
-      const previewImg = document.getElementById('icon-settings-preview');
-
-      if (appleLink) appleLink.href = dataUrl;
-      if (favLink) favLink.href = dataUrl;
-      if (headerImg) headerImg.src = dataUrl;
-      if (previewImg) previewImg.src = dataUrl;
-
-      const manifestLink = document.getElementById('web-manifest-link');
-      if (manifestLink) {
-        const manifestObj = {
-          name: 'スマート家計簿 Pro',
-          short_name: 'スマート家計簿',
-          start_url: location.href,
-          display: 'standalone',
-          background_color: '#f1f5f9',
-          theme_color: iconConfig.bg || '#2563eb',
-          icons: [
-            { src: dataUrl, sizes: '192x192', type: 'image/png' },
-            { src: dataUrl, sizes: '512x512', type: 'image/png' }
-          ]
-        };
-        manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj));
-      }
-    }
-
-    function initAppIcon() {
-      try {
-        const saved = localStorage.getItem(ICON_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') iconConfig = { ...iconConfig, ...parsed };
-        }
-      } catch {}
-
-      if (iconConfig.mode === 'custom' && iconConfig.customDataUrl) {
-        applyAppIconDataUrl(iconConfig.customDataUrl);
-      } else {
-        applyAppIconDataUrl(generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512));
-      }
-    }
-
-    function saveIconConfig() {
-      try {
-        localStorage.setItem(ICON_STORAGE_KEY, JSON.stringify(iconConfig));
-      } catch {}
-    }
-
-    function updatePresetAppIcon(partial) {
-      iconConfig = { ...iconConfig, ...partial, mode: 'preset' };
-      applyAppIconDataUrl(generatePresetIconDataUrl(iconConfig.bg, iconConfig.emoji, 512));
-      saveIconConfig();
-      showToast('ショートカット用アイコンを更新しました', 'success');
-    }
-
-    function handleCustomAppIconUpload(event) {
-      const file = event.target?.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const size = 512;
-          const canvas = document.createElement('canvas');
-          canvas.width = size;
-          canvas.height = size;
-          const ctx = canvas.getContext('2d');
-          const minSide = Math.min(img.width, img.height);
-          const sx = (img.width - minSide) / 2;
-          const sy = (img.height - minSide) / 2;
-          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-
-          const dataUrl = canvas.toDataURL('image/png');
-          iconConfig = { ...iconConfig, mode: 'custom', customDataUrl: dataUrl };
-          applyAppIconDataUrl(dataUrl);
-          saveIconConfig();
-          showToast('カスタム画像をアイコンに設定しました', 'success');
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-      event.target.value = '';
-    }
-
-    // =========================================================================
-    // 3. 状態管理・永続化・画面ナビゲーション
-    // =========================================================================
-    let appState = createDefaultData();
-    let currentMonth = '';
-    let activeMobileView = 'summary';
-    let expandedNodes = new Set();
-    let categoryChartInstance = null;
-
-    let masterSelectedMajorId = null;
-    let masterSelectedMediumId = null;
-
-    let cameraStream = null;
-    let cameraFacingMode = 'environment';
-    let availableVideoDevices = [];
-    let currentDeviceIndex = 0;
-    let receiptImageQueue = [];
-    function sanitizeImportedState(raw) {
-      if (!raw || typeof raw !== 'object') return null;
-
-      let categories = [];
+      const categories = [];
       if (Array.isArray(raw.categories)) {
-        const seenMaj = new Set();
-        for (const maj of raw.categories) {
+        for (const maj of raw.categories.slice(0, 60)) {
           if (!maj || typeof maj !== 'object') continue;
+          const majId = sanitizeText(maj.id, 60, uid('cat'));
           const majName = sanitizeText(maj.name, 60);
           if (!majName) continue;
-          let majId = sanitizeText(maj.id, 60, uid('maj'));
-          if (seenMaj.has(majId)) majId = uid('maj');
-          seenMaj.add(majId);
 
           const mediums = [];
-          const seenMed = new Set();
           if (Array.isArray(maj.mediums)) {
-            for (const med of maj.mediums) {
+            for (const med of maj.mediums.slice(0, 60)) {
               if (!med || typeof med !== 'object') continue;
+              const medId = sanitizeText(med.id, 60, uid('med'));
               const medName = sanitizeText(med.name, 60);
               if (!medName) continue;
-              let medId = sanitizeText(med.id, 60, uid('med'));
-              if (seenMed.has(medId)) medId = uid('med');
-              seenMed.add(medId);
 
               const minors = [];
-              const seenMin = new Set();
               if (Array.isArray(med.minors)) {
-                for (const min of med.minors) {
+                for (const min of med.minors.slice(0, 80)) {
                   if (!min || typeof min !== 'object') continue;
+                  const minId = sanitizeText(min.id, 60, uid('min'));
                   const minName = sanitizeText(min.name, 60);
                   if (!minName) continue;
-                  let minId = sanitizeText(min.id, 60, uid('min'));
-                  if (seenMin.has(minId)) minId = uid('min');
-                  seenMin.add(minId);
                   minors.push({ id: minId, name: minName });
                 }
               }
+              if (minors.length === 0) minors.push({ id: uid('min'), name: 'その他' });
               mediums.push({ id: medId, name: medName, minors });
             }
+          }
+          if (mediums.length === 0) {
+            mediums.push({ id: uid('med'), name: '一般', minors: [{ id: uid('min'), name: 'その他' }] });
           }
           categories.push({ id: majId, name: majName, mediums });
         }
       }
-      if (categories.length === 0) categories = createDefaultData().categories;
+      if (categories.length === 0) categories.push(...defaults.categories);
 
       const stores = Array.isArray(raw.stores)
-        ? [...new Set(raw.stores.map((s) => sanitizeText(s, 80)).filter(Boolean))]
-        : [...createDefaultData().stores];
+        ? Array.from(new Set(raw.stores.map((s) => sanitizeText(s, 80)).filter(Boolean))).slice(0, 300)
+        : defaults.stores;
 
       const payments = Array.isArray(raw.payments)
-        ? [...new Set(raw.payments.map((p) => sanitizeText(p, 60)).filter(Boolean))]
-        : [...createDefaultData().payments];
+        ? Array.from(new Set(raw.payments.map((p) => sanitizeText(p, 60)).filter(Boolean))).slice(0, 100)
+        : defaults.payments;
       if (payments.length === 0) payments.push('現金');
 
       const receipts = [];
       if (Array.isArray(raw.receipts)) {
-        for (const rec of raw.receipts) {
+        for (const rec of raw.receipts.slice(0, 10000)) {
           if (!rec || typeof rec !== 'object') continue;
           const date = sanitizeDate(rec.date);
-          if (!date) continue;
-          const store = sanitizeText(rec.store, 80, '不明な店舗');
+          const store = sanitizeText(rec.store, 80);
           const payment = sanitizeText(rec.payment, 60, payments[0]);
-          const memo = sanitizeText(rec.memo, MAX_MEMO_LEN, '');
+          if (!date || !store) continue;
+
           const items = [];
           if (Array.isArray(rec.items)) {
             for (const itm of rec.items.slice(0, MAX_ITEMS_PER_RECEIPT)) {
@@ -1023,274 +948,290 @@
               items.push({
                 id: sanitizeText(itm.id, 60, uid('itm')),
                 name: sanitizeText(itm.name, 100, '商品'),
-                price: sanitizePositiveInt(itm.price, 0),
+                price: sanitizeSignedInt(itm.price, 0),
                 majorId: sanitizeText(itm.majorId, 60, categories[0].id),
                 mediumId: sanitizeText(itm.mediumId, 60, ''),
                 minorId: sanitizeText(itm.minorId, 60, '')
               });
             }
           }
-          if (items.length > 0) {
-            receipts.push({ id: sanitizeText(rec.id, 60, uid('rec')), date, store, payment, memo, items });
-          }
+
+          receipts.push({
+            id: sanitizeText(rec.id, 60, uid('rec')),
+            date,
+            store,
+            payment,
+            memo: sanitizeText(rec.memo, MAX_MEMO_LEN, ''),
+            items
+          });
         }
       }
 
       return { categories, stores, payments, receipts };
     }
 
-    function loadState() {
+    // =========================================================================
+    // 2. 状態管理 & モバイルビュー切り替え
+    // =========================================================================
+    let appState = loadAppState();
+    let currentMonth = getTodayMonthStr();
+    let activeMobileView = 'summary';
+    let expandedNodes = new Set();
+    let categoryChartInstance = null;
+
+    let selectedMasterMajorId = appState.categories[0]?.id || '';
+    let selectedMasterMediumId = appState.categories[0]?.mediums[0]?.id || '';
+
+    function getTodayDateStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getTodayMonthStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function loadAppState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) {
-          appState = createDefaultData();
-          saveState();
-          return;
+          const initial = createDefaultData();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+          return initial;
         }
-        const parsed = sanitizeImportedState(JSON.parse(raw));
-        appState = parsed || createDefaultData();
-      } catch {
-        appState = createDefaultData();
+        return sanitizeAppState(JSON.parse(raw));
+      } catch (e) {
+        return createDefaultData();
       }
     }
 
-    function saveState() {
+    function saveAppState() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      } catch {
-        showToast('端末へのデータ保存に失敗しました', 'error');
+      } catch (e) {
+        showToast('データの保存に失敗しました', 'error');
       }
     }
 
-    function switchMobileView(viewName) {
-      activeMobileView = viewName;
-      ['summary', 'history', 'entry', 'master'].forEach((v) => {
-        const sec = document.getElementById(`view-${v}`);
-        const nav = document.getElementById(`nav-${v}`);
-        if (sec) sec.classList.toggle('hidden', v !== viewName);
-        if (nav) {
-          if (v === viewName) {
-            nav.classList.add('text-brand-600', 'font-bold');
-            nav.classList.remove('text-slate-500', 'font-medium');
-          } else {
-            nav.classList.remove('text-brand-600', 'font-bold');
-            nav.classList.add('text-slate-500', 'font-medium');
-          }
+    function switchMobileView(view) {
+      if (view !== 'entry') {
+        stopReceiptCamera(true);
+      }
+      activeMobileView = view;
+      const views = ['summary', 'history', 'entry', 'master'];
+      for (const v of views) {
+        document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
+        const navBtn = document.getElementById(`nav-${v}`);
+        if (v === view) {
+          navBtn.classList.remove('text-slate-500', 'font-medium');
+          navBtn.classList.add('text-brand-600', 'font-bold');
+        } else {
+          navBtn.classList.remove('text-brand-600', 'font-bold');
+          navBtn.classList.add('text-slate-500', 'font-medium');
         }
-      });
+      }
+      document.getElementById('month-selector-bar').classList.toggle('hidden', view === 'entry' || view === 'master');
 
-      const monthBar = document.getElementById('month-selector-bar');
-      if (monthBar) monthBar.classList.toggle('hidden', viewName === 'entry' || viewName === 'master');
-
-      if (viewName !== 'entry') stopReceiptCamera();
-      if (viewName === 'summary') renderDashboard();
-      if (viewName === 'history') renderHistory();
-      if (viewName === 'master') initMasterView();
-
+      if (view === 'summary' || view === 'history') {
+        refreshDashboard();
+      } else if (view === 'master') {
+        renderAllMasterViews();
+        loadGeminiKeyToInput();
+      } else if (view === 'entry') {
+        updateGeminiKeyBadge();
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // =========================================================================
-    // 4. 通知・モーダルユーティリティ
-    // =========================================================================
-    function showToast(message, type = 'info') {
+    function showToast(message, type = 'success') {
       const container = document.getElementById('toast-container');
-      if (!container) return;
-      const styles = {
-        success: 'bg-emerald-600 text-white',
-        error: 'bg-rose-600 text-white',
-        warning: 'bg-amber-500 text-slate-950',
-        info: 'bg-slate-800 text-white'
-      };
       const el = document.createElement('div');
-      el.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${styles[type] || styles.info}`;
-      el.textContent = message;
+      const colors = {
+        success: 'bg-slate-900 text-white border-slate-700',
+        error: 'bg-rose-600 text-white border-rose-500',
+        info: 'bg-brand-600 text-white border-brand-500'
+      };
+      const icons = {
+        success: 'fa-circle-check text-emerald-400',
+        error: 'fa-circle-exclamation text-white',
+        info: 'fa-circle-info text-white'
+      };
+      el.className = `pointer-events-auto flex items-center gap-2 px-3.5 py-2.5 rounded-xl shadow-lg border text-xs font-medium transition-all duration-300 ${colors[type] || colors.success}`;
+      el.innerHTML = `<i class="fa-solid ${icons[type] || icons.success}"></i><span>${escapeHtml(message)}</span>`;
       container.appendChild(el);
       setTimeout(() => {
         el.style.opacity = '0';
-        setTimeout(() => el.remove(), 220);
-      }, 3000);
+        setTimeout(() => el.remove(), 250);
+      }, 2600);
     }
 
-    function showConfirm(title, message, okLabel = '実行する') {
+    function showConfirm(title, message) {
       return new Promise((resolve) => {
         const modal = document.getElementById('confirm-modal');
         document.getElementById('confirm-title').textContent = title;
         document.getElementById('confirm-message').textContent = message;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
         const okBtn = document.getElementById('confirm-ok-btn');
         const cancelBtn = document.getElementById('confirm-cancel-btn');
-        okBtn.textContent = okLabel;
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-
-        const finish = (res) => {
+        const cleanup = (result) => {
           modal.classList.add('hidden');
           modal.classList.remove('flex');
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
-          resolve(res);
+          okBtn.onclick = null;
+          cancelBtn.onclick = null;
+          resolve(result);
         };
-        const onOk = () => finish(true);
-        const onCancel = () => finish(false);
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
+
+        okBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
       });
     }
 
-    function showPromptModal(title, defaultValue = '') {
+    function showPrompt(title, defaultValue = '') {
       return new Promise((resolve) => {
         const modal = document.getElementById('prompt-modal');
-        document.getElementById('prompt-title').textContent = title;
         const input = document.getElementById('prompt-input');
-        const okBtn = document.getElementById('prompt-ok-btn');
-        const cancelBtn = document.getElementById('prompt-cancel-btn');
+        document.getElementById('prompt-title').textContent = title;
         input.value = defaultValue;
-
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        setTimeout(() => input.focus(), 50);
+        setTimeout(() => {
+          input.focus();
+          input.select();
+        }, 30);
 
-        const finish = (val) => {
+        const okBtn = document.getElementById('prompt-ok-btn');
+        const cancelBtn = document.getElementById('prompt-cancel-btn');
+
+        const cleanup = (val) => {
           modal.classList.add('hidden');
           modal.classList.remove('flex');
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
+          okBtn.onclick = null;
+          cancelBtn.onclick = null;
           resolve(val);
         };
-        const onOk = () => finish(input.value.trim());
-        const onCancel = () => finish(null);
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
+
+        okBtn.onclick = () => cleanup(input.value.trim());
+        cancelBtn.onclick = () => cleanup(null);
       });
     }
 
     // =========================================================================
-    // 5. 月次集計・グラフ・支払方法別集計
+    // 3. 集計・グラフ・履歴描画
     // =========================================================================
-    function setTodayMonth() {
-      const now = new Date();
-      currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const picker = document.getElementById('current-month-picker');
-      if (picker) picker.value = currentMonth;
-      renderAll();
-    }
-
-    function onMonthPickerChange(val) {
-      if (!val || !/^\d{4}-\d{2}$/.test(val)) return;
-      currentMonth = val;
-      renderAll();
+    function findCategoryNames(majorId, mediumId, minorId) {
+      const maj = appState.categories.find((c) => c.id === majorId);
+      if (!maj) return { majorName: '未分類', mediumName: '未分類', minorName: '未分類' };
+      const med = maj.mediums.find((m) => m.id === mediumId);
+      if (!med) return { majorName: maj.name, mediumName: '未分類', minorName: '未分類' };
+      const min = med.minors.find((n) => n.id === minorId);
+      return { majorName: maj.name, mediumName: med.name, minorName: min ? min.name : '未分類' };
     }
 
     function changeMonth(delta) {
-      const [y, m] = (currentMonth || '').split('-').map(Number);
-      if (!y || !m) { setTodayMonth(); return; }
+      const [y, m] = currentMonth.split('-').map(Number);
       const d = new Date(y, m - 1 + delta, 1);
       currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const picker = document.getElementById('current-month-picker');
-      if (picker) picker.value = currentMonth;
-      renderAll();
+      document.getElementById('current-month-picker').value = currentMonth;
+      refreshDashboard();
     }
 
-    function getMonthReceipts(ym) {
+    function onMonthPickerChange(val) {
+      if (/^\d{4}-\d{2}$/.test(val)) {
+        currentMonth = val;
+        refreshDashboard();
+      }
+    }
+
+    function setTodayMonth() {
+      currentMonth = getTodayMonthStr();
+      document.getElementById('current-month-picker').value = currentMonth;
+      refreshDashboard();
+    }
+
+    function getMonthlyReceipts() {
       return appState.receipts
-        .filter((r) => r.date && r.date.startsWith(ym))
-        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+        .filter((r) => r.date.startsWith(currentMonth))
+        .sort((a, b) => b.date.localeCompare(a.date));
     }
 
-    function findCategoryNames(majorId, mediumId, minorId) {
-      const maj = appState.categories.find((c) => c.id === majorId);
-      const med = maj ? maj.mediums.find((m) => m.id === mediumId) : null;
-      const min = med ? med.minors.find((s) => s.id === minorId) : null;
-      return {
-        majorName: maj ? maj.name : '未分類',
-        mediumName: med ? med.name : '未分類',
-        minorName: min ? min.name : '未分類'
-      };
-    }
-
-    function renderAll() {
-      populateMasterSelects();
-      renderDashboard();
-      renderHistory();
-    }
-
-    function renderDashboard() {
-      const receipts = getMonthReceipts(currentMonth);
+    function refreshDashboard() {
+      const monthlyReceipts = getMonthlyReceipts();
       let totalAmount = 0;
-      let totalItems = 0;
+      let totalItemCount = 0;
 
       const majorMap = new Map();
       for (const maj of appState.categories) {
-        majorMap.set(maj.id, { id: maj.id, name: maj.name, amount: 0, count: 0, mediums: new Map() });
+        const medMap = new Map();
         for (const med of maj.mediums) {
-          majorMap.get(maj.id).mediums.set(med.id, { id: med.id, name: med.name, amount: 0, count: 0, minors: new Map() });
+          const minMap = new Map();
           for (const min of med.minors) {
-            majorMap.get(maj.id).mediums.get(med.id).minors.set(min.id, { id: min.id, name: min.name, amount: 0, count: 0 });
+            minMap.set(min.id, { id: min.id, name: min.name, amount: 0, count: 0 });
           }
+          medMap.set(med.id, { id: med.id, name: med.name, amount: 0, count: 0, minors: minMap });
         }
+        majorMap.set(maj.id, { id: maj.id, name: maj.name, amount: 0, count: 0, mediums: medMap });
       }
 
       const paymentMap = new Map();
-      for (const p of appState.payments) {
-        paymentMap.set(p, { name: p, amount: 0, count: 0 });
-      }
 
-      for (const rec of receipts) {
-        const payKey = rec.payment || '未指定';
-        if (!paymentMap.has(payKey)) paymentMap.set(payKey, { name: payKey, amount: 0, count: 0 });
+      for (const rec of monthlyReceipts) {
         let recSum = 0;
-
         for (const itm of rec.items || []) {
           const price = Number(itm.price) || 0;
-          totalAmount += price;
-          totalItems += 1;
           recSum += price;
+          totalAmount += price;
+          totalItemCount += 1;
 
           const names = findCategoryNames(itm.majorId, itm.mediumId, itm.minorId);
-          const majId = itm.majorId || 'unclassified_maj';
-          if (!majorMap.has(majId)) {
-            majorMap.set(majId, { id: majId, name: names.majorName, amount: 0, count: 0, mediums: new Map() });
+          const majKey = majorMap.has(itm.majorId) ? itm.majorId : '__uncategorized__';
+          if (!majorMap.has(majKey)) {
+            majorMap.set(majKey, { id: majKey, name: names.majorName, amount: 0, count: 0, mediums: new Map() });
           }
-          const majNode = majorMap.get(majId);
+          const majNode = majorMap.get(majKey);
           majNode.amount += price;
           majNode.count += 1;
 
-          const medId = itm.mediumId || 'unclassified_med';
-          if (!majNode.mediums.has(medId)) {
-            majNode.mediums.set(medId, { id: medId, name: names.mediumName, amount: 0, count: 0, minors: new Map() });
+          const medKey = majNode.mediums.has(itm.mediumId) ? itm.mediumId : '__uncat_med__';
+          if (!majNode.mediums.has(medKey)) {
+            majNode.mediums.set(medKey, { id: medKey, name: names.mediumName, amount: 0, count: 0, minors: new Map() });
           }
-          const medNode = majNode.mediums.get(medId);
+          const medNode = majNode.mediums.get(medKey);
           medNode.amount += price;
           medNode.count += 1;
 
-          const minId = itm.minorId || 'unclassified_min';
-          if (!medNode.minors.has(minId)) {
-            medNode.minors.set(minId, { id: minId, name: names.minorName, amount: 0, count: 0 });
+          const minKey = medNode.minors.has(itm.minorId) ? itm.minorId : '__uncat_min__';
+          if (!medNode.minors.has(minKey)) {
+            medNode.minors.set(minKey, { id: minKey, name: names.minorName, amount: 0, count: 0 });
           }
-          const minNode = medNode.minors.get(minId);
+          const minNode = medNode.minors.get(minKey);
           minNode.amount += price;
           minNode.count += 1;
         }
-
-        const pNode = paymentMap.get(payKey);
-        pNode.amount += recSum;
-        pNode.count += 1;
+        const payKey = rec.payment || '未指定';
+        paymentMap.set(payKey, (paymentMap.get(payKey) || 0) + recSum);
       }
 
-      document.getElementById('header-total-amount').textContent = `¥${totalAmount.toLocaleString()}`;
-      document.getElementById('kpi-total-amount').textContent = `¥${totalAmount.toLocaleString()}`;
-      document.getElementById('kpi-receipt-count').textContent = String(receipts.length);
-      document.getElementById('kpi-item-count').textContent = String(totalItems);
+      const formattedTotal = `¥${totalAmount.toLocaleString()}`;
+      document.getElementById('header-total-amount').textContent = formattedTotal;
+      document.getElementById('kpi-total-amount').textContent = formattedTotal;
+      document.getElementById('kpi-receipt-count').textContent = String(monthlyReceipts.length);
+      document.getElementById('kpi-item-count').textContent = String(totalItemCount);
 
       renderCategoryHierarchy(majorMap, totalAmount);
       renderCategoryChart(majorMap);
       renderPaymentSummary(paymentMap, totalAmount);
+      updateFilterSelectOptions();
+      renderHistory();
     }
 
     function renderCategoryHierarchy(majorMap, totalAmount) {
       const container = document.getElementById('category-hierarchy-container');
-      if (totalAmount === 0) {
+      const hasAnyItems = Array.from(majorMap.values()).some((m) => m.count > 0);
+      if (!hasAnyItems && totalAmount === 0) {
         container.innerHTML = `
           <div class="py-7 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
             ${escapeHtml(currentMonth)} の支出データがありません。<br>下部の「登録・撮影」タブから入力できます。
@@ -1300,10 +1241,10 @@
 
       let html = '';
       for (const maj of majorMap.values()) {
-        if (maj.amount === 0) continue;
+        if (maj.count === 0 && maj.amount === 0) continue;
         const majKey = `maj:${maj.id}`;
         const isMajOpen = expandedNodes.has(majKey);
-        const pct = ((maj.amount / totalAmount) * 100).toFixed(1);
+        const pct = totalAmount > 0 ? ((maj.amount / totalAmount) * 100).toFixed(1) : '0.0';
 
         html += `
           <div class="border border-slate-200 rounded-xl overflow-hidden">
@@ -1313,13 +1254,13 @@
                 <span class="font-bold text-xs text-slate-800 truncate">${escapeHtml(maj.name)}</span>
                 <span class="text-[10px] text-slate-400 shrink-0">${pct}%</span>
               </div>
-              <span class="font-bold text-xs text-slate-900 shrink-0">¥${maj.amount.toLocaleString()}</span>
+              <span class="font-bold text-xs ${maj.amount < 0 ? 'text-rose-600' : 'text-slate-900'} shrink-0">${maj.amount < 0 ? '-¥' + Math.abs(maj.amount).toLocaleString() : '¥' + maj.amount.toLocaleString()}</span>
             </button>`;
 
         if (isMajOpen) {
           html += `<div class="divide-y divide-slate-100 bg-white">`;
           for (const med of maj.mediums.values()) {
-            if (med.amount === 0) continue;
+            if (med.count === 0 && med.amount === 0) continue;
             const medKey = `med:${maj.id}:${med.id}`;
             const isMedOpen = expandedNodes.has(medKey);
 
@@ -1330,17 +1271,17 @@
                     <i class="fa-solid ${isMedOpen ? 'fa-minus' : 'fa-plus'} text-[10px] text-brand-500 w-3"></i>
                     <span class="font-semibold text-xs text-slate-700 truncate">${escapeHtml(med.name)}</span>
                   </div>
-                  <span class="font-semibold text-xs text-slate-800 shrink-0">¥${med.amount.toLocaleString()}</span>
+                  <span class="font-semibold text-xs ${med.amount < 0 ? 'text-rose-600' : 'text-slate-800'} shrink-0">${med.amount < 0 ? '-¥' + Math.abs(med.amount).toLocaleString() : '¥' + med.amount.toLocaleString()}</span>
                 </button>`;
 
             if (isMedOpen) {
               html += `<div class="mt-1.5 ml-3.5 pl-2.5 border-l-2 border-brand-100 space-y-1">`;
               for (const min of med.minors.values()) {
-                if (min.amount === 0) continue;
+                if (min.count === 0 && min.amount === 0) continue;
                 html += `
                   <div class="flex items-center justify-between text-[11px] text-slate-600 py-0.5">
                     <span class="truncate">${escapeHtml(min.name)} (${min.count}点)</span>
-                    <span class="font-medium text-slate-800 shrink-0">¥${min.amount.toLocaleString()}</span>
+                    <span class="font-medium ${min.amount < 0 ? 'text-rose-600' : 'text-slate-800'} shrink-0">${min.amount < 0 ? '-¥' + Math.abs(min.amount).toLocaleString() : '¥' + min.amount.toLocaleString()}</span>
                   </div>`;
               }
               html += `</div>`;
@@ -1354,13 +1295,6 @@
       container.innerHTML = html;
     }
 
-    function toggleCategoryNode(key) {
-      if (!key) return;
-      if (expandedNodes.has(key)) expandedNodes.delete(key);
-      else expandedNodes.add(key);
-      renderDashboard();
-    }
-
     function expandAllCategories(expand) {
       expandedNodes.clear();
       if (expand) {
@@ -1371,36 +1305,37 @@
           }
         }
       }
-      renderDashboard();
+      refreshDashboard();
     }
 
     function renderCategoryChart(majorMap) {
       const canvas = document.getElementById('category-chart');
       const emptyMsg = document.getElementById('chart-empty-msg');
-      if (!canvas || typeof Chart === 'undefined') return;
+      const activeMajors = Array.from(majorMap.values()).filter((m) => m.amount > 0);
 
-      const entries = Array.from(majorMap.values()).filter((m) => m.amount > 0);
       if (categoryChartInstance) {
         categoryChartInstance.destroy();
         categoryChartInstance = null;
       }
 
-      if (entries.length === 0) {
+      if (activeMajors.length === 0) {
         canvas.classList.add('hidden');
         emptyMsg.classList.remove('hidden');
         return;
       }
+
       canvas.classList.remove('hidden');
       emptyMsg.classList.add('hidden');
 
       const palette = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b'];
+
       categoryChartInstance = new Chart(canvas, {
         type: 'doughnut',
         data: {
-          labels: entries.map((e) => e.name),
+          labels: activeMajors.map((m) => m.name),
           datasets: [{
-            data: entries.map((e) => e.amount),
-            backgroundColor: entries.map((_, idx) => palette[idx % palette.length]),
+            data: activeMajors.map((m) => m.amount),
+            backgroundColor: activeMajors.map((_, idx) => palette[idx % palette.length]),
             borderWidth: 2,
             borderColor: '#ffffff'
           }]
@@ -1411,8 +1346,12 @@
           cutout: '60%',
           plugins: {
             legend: {
-              position: 'bottom',
-              labels: { boxWidth: 10, font: { size: 11, family: '"Noto Sans JP", sans-serif' } }
+              position: 'right',
+              labels: {
+                boxWidth: 10,
+                font: { size: 11, family: '"Noto Sans JP", sans-serif' },
+                color: '#334155'
+              }
             }
           }
         }
@@ -1421,61 +1360,64 @@
 
     function renderPaymentSummary(paymentMap, totalAmount) {
       const container = document.getElementById('payment-summary-container');
-      const entries = Array.from(paymentMap.values()).filter((p) => p.amount > 0).sort((a, b) => b.amount - a.amount);
+      const entries = Array.from(paymentMap.entries()).sort((a, b) => b[1] - a[1]);
+
       if (entries.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-400">支払データがありません</div>`;
+        container.innerHTML = `<div class="text-xs text-slate-400 text-center py-2">データなし</div>`;
         return;
       }
-      container.innerHTML = entries.map((p) => {
-        const pct = totalAmount > 0 ? Math.round((p.amount / totalAmount) * 100) : 0;
+
+      container.innerHTML = entries.map(([pay, amt]) => {
+        const pct = totalAmount > 0 ? Math.max(0, Math.round((amt / totalAmount) * 100)) : 0;
         return `
-          <div class="space-y-1">
-            <div class="flex items-center justify-between text-xs">
-              <span class="font-medium text-slate-700">${escapeHtml(p.name)} (${p.count}件)</span>
-              <span class="font-bold text-slate-800">¥${p.amount.toLocaleString()} (${pct}%)</span>
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-medium text-slate-700">${escapeHtml(pay)}</span>
+              <span class="font-bold text-slate-800">¥${amt.toLocaleString()} <span class="text-[10px] font-normal text-slate-400">(${pct}%)</span></span>
             </div>
-            <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-brand-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+            <div class="w-full bg-slate-100 rounded-full h-1.5">
+              <div class="bg-brand-600 h-1.5 rounded-full" style="width: ${Math.min(100, pct)}%"></div>
             </div>
           </div>`;
       }).join('');
     }
 
-    // =========================================================================
-    // 6. 購入履歴一覧
-    // =========================================================================
+    function updateFilterSelectOptions() {
+      const majorSelect = document.getElementById('filter-major-cat');
+      const prevMajor = majorSelect.value;
+      majorSelect.innerHTML = `<option value="">すべての大分類</option>` +
+        appState.categories.map((c) => `<option value="${escapeAttr(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+      majorSelect.value = prevMajor;
+
+      const paySelect = document.getElementById('filter-payment');
+      const prevPay = paySelect.value;
+      paySelect.innerHTML = `<option value="">すべての支払方法</option>` +
+        appState.payments.map((p) => `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`).join('');
+      paySelect.value = prevPay;
+    }
+
     function renderHistory() {
       const listEl = document.getElementById('receipt-history-list');
-      const badgeEl = document.getElementById('history-count-badge');
-      const keyword = (document.getElementById('filter-keyword')?.value || '').trim().toLowerCase();
-      const majorFilter = document.getElementById('filter-major-cat')?.value || '';
-      const paymentFilter = document.getElementById('filter-payment')?.value || '';
+      const keyword = (document.getElementById('filter-keyword').value || '').trim().toLowerCase();
+      const filterMajor = document.getElementById('filter-major-cat').value;
+      const filterPay = document.getElementById('filter-payment').value;
 
-      const monthReceipts = getMonthReceipts(currentMonth);
-      const filtered = monthReceipts.filter((rec) => {
-        if (paymentFilter && rec.payment !== paymentFilter) return false;
-        const matchingItems = (rec.items || []).filter((itm) => {
-          if (majorFilter && itm.majorId !== majorFilter) return false;
-          if (!keyword) return true;
-          const names = findCategoryNames(itm.majorId, itm.mediumId, itm.minorId);
-          return (
-            (itm.name || '').toLowerCase().includes(keyword) ||
-            names.majorName.toLowerCase().includes(keyword) ||
-            names.mediumName.toLowerCase().includes(keyword) ||
-            names.minorName.toLowerCase().includes(keyword)
-          );
-        });
-        if (majorFilter || keyword) {
-          const storeHit = keyword ? (rec.store || '').toLowerCase().includes(keyword) || (rec.memo || '').toLowerCase().includes(keyword) : false;
-          if (majorFilter) return matchingItems.length > 0;
-          return matchingItems.length > 0 || storeHit;
+      const filtered = getMonthlyReceipts().filter((rec) => {
+        if (filterPay && rec.payment !== filterPay) return false;
+        if (filterMajor && !(rec.items || []).some((i) => i.majorId === filterMajor)) return false;
+        if (keyword) {
+          const hitStore = rec.store.toLowerCase().includes(keyword);
+          const hitMemo = (rec.memo || '').toLowerCase().includes(keyword);
+          const hitItem = (rec.items || []).some((i) => i.name.toLowerCase().includes(keyword));
+          if (!hitStore && !hitMemo && !hitItem) return false;
         }
         return true;
       });
 
-      badgeEl.textContent = `${filtered.length}件`;
+      document.getElementById('history-count-badge').textContent = `${filtered.length}件`;
+
       if (filtered.length === 0) {
-        listEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">一致する購入履歴はありません</div>`;
+        listEl.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-400">該当する購入履歴がありません。</div>`;
         return;
       }
 
@@ -1483,36 +1425,41 @@
         const sum = (rec.items || []).reduce((acc, itm) => acc + (Number(itm.price) || 0), 0);
         const itemsHtml = (rec.items || []).map((itm) => {
           const names = findCategoryNames(itm.majorId, itm.mediumId, itm.minorId);
+          const p = Number(itm.price) || 0;
           return `
             <div class="flex items-center justify-between gap-2 py-1.5 text-xs border-t border-slate-100 first:border-t-0">
               <div class="min-w-0">
                 <div class="font-medium text-slate-800 truncate">${escapeHtml(itm.name)}</div>
                 <div class="text-[10px] text-slate-500 truncate">${escapeHtml(names.majorName)} ＞ ${escapeHtml(names.mediumName)} ＞ ${escapeHtml(names.minorName)}</div>
               </div>
-              <span class="font-bold text-slate-700 shrink-0">¥${(Number(itm.price) || 0).toLocaleString()}</span>
+              <span class="font-bold ${p < 0 ? 'text-rose-600' : 'text-slate-700'} shrink-0">${p < 0 ? '-¥' + Math.abs(p).toLocaleString() : '¥' + p.toLocaleString()}</span>
             </div>`;
         }).join('');
 
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-2.5">
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
             <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
+              <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-[11px] font-bold text-slate-400">${escapeHtml(rec.date)}</span>
-                  <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-bold">${escapeHtml(rec.payment)}</span>
+                  <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">${escapeHtml(rec.date)}</span>
+                  <span class="text-[11px] font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">${escapeHtml(rec.payment)}</span>
                 </div>
-                <div class="text-sm font-bold text-slate-900 mt-0.5 truncate">${escapeHtml(rec.store)}</div>
-                ${rec.memo ? `<div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(rec.memo)}</div>` : ''}
+                <div class="font-bold text-sm text-slate-900 mt-1">${escapeHtml(rec.store)}</div>
+                ${rec.memo ? `<div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(rec.memo)}</div>` : ''}
               </div>
-              <div class="text-right shrink-0">
+              <div class="text-right">
                 <div class="text-base font-bold text-slate-900">¥${sum.toLocaleString()}</div>
-                <div class="flex items-center justify-end gap-1.5 mt-1">
-                  <button type="button" data-action="edit-receipt" data-id="${escapeAttr(rec.id)}" class="px-2.5 py-1 text-[11px] font-bold text-brand-600 bg-brand-50 rounded-lg">編集</button>
-                  <button type="button" data-action="delete-receipt" data-id="${escapeAttr(rec.id)}" class="px-2 py-1 text-[11px] font-bold text-rose-600 bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  <button type="button" data-action="edit-receipt" data-id="${escapeAttr(rec.id)}" class="px-2.5 py-1.5 text-[11px] font-bold text-brand-600 bg-brand-50 active:bg-brand-100 rounded-lg">
+                    編集
+                  </button>
+                  <button type="button" data-action="delete-receipt" data-id="${escapeAttr(rec.id)}" class="px-2.5 py-1.5 text-[11px] font-bold text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg">
+                    削除
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="bg-slate-50 rounded-xl px-3 py-1 border border-slate-200/70">
+            <div class="bg-slate-50/70 rounded-xl px-3 py-1 border border-slate-100">
               ${itemsHtml}
             </div>
           </div>`;
@@ -1520,91 +1467,94 @@
     }
 
     // =========================================================================
-    // 7. 購入登録フォーム
+    // 4. 購入登録フォーム（3階層連動・保存・編集）
     // =========================================================================
-    function populateMasterSelects() {
-      const storeDatalist = document.getElementById('store-datalist');
-      if (storeDatalist) storeDatalist.innerHTML = appState.stores.map((s) => `<option value="${escapeAttr(s)}"></option>`).join('');
+    function syncFormMasterOptions() {
+      const storeList = document.getElementById('store-datalist');
+      storeList.innerHTML = appState.stores.map((s) => `<option value="${escapeAttr(s)}"></option>`).join('');
+
       const paySelect = document.getElementById('form-payment');
-      if (paySelect) {
-        const cur = paySelect.value;
-        paySelect.innerHTML = appState.payments.map((p) => `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`).join('');
-        if (cur && appState.payments.includes(cur)) paySelect.value = cur;
-      }
-      const filterPay = document.getElementById('filter-payment');
-      if (filterPay) {
-        const cur = filterPay.value;
-        filterPay.innerHTML = `<option value="">すべての支払方法</option>` + appState.payments.map((p) => `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`).join('');
-        if (cur) filterPay.value = cur;
-      }
-      const filterMajor = document.getElementById('filter-major-cat');
-      if (filterMajor) {
-        const cur = filterMajor.value;
-        filterMajor.innerHTML = `<option value="">すべての大分類</option>` + appState.categories.map((c) => `<option value="${escapeAttr(c.id)}">${escapeHtml(c.name)}</option>`).join('');
-        if (cur) filterMajor.value = cur;
-      }
+      const prev = paySelect.value;
+      paySelect.innerHTML = appState.payments.map((p) => `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`).join('');
+      if (prev && appState.payments.includes(prev)) paySelect.value = prev;
     }
 
-    function buildMajorOptionsHtml(selectedMajorId) {
-      return appState.categories.map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === selectedMajorId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+    function buildMajorOptionsHtml(selectedId) {
+      return appState.categories.map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
     }
 
-    function buildMediumOptionsHtml(majorId, selectedMediumId) {
+    function buildMediumOptionsHtml(majorId, selectedMedId) {
       const maj = appState.categories.find((c) => c.id === majorId) || appState.categories[0];
-      if (!maj || !maj.mediums.length) return `<option value="">中分類なし</option>`;
-      return maj.mediums.map((m) => `<option value="${escapeAttr(m.id)}" ${m.id === selectedMediumId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+      if (!maj) return '';
+      return maj.mediums.map((m) => `<option value="${escapeAttr(m.id)}" ${m.id === selectedMedId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
     }
 
-    function buildMinorOptionsHtml(majorId, mediumId, selectedMinorId) {
+    function buildMinorOptionsHtml(majorId, mediumId, selectedMinId) {
       const maj = appState.categories.find((c) => c.id === majorId) || appState.categories[0];
-      const med = maj ? maj.mediums.find((m) => m.id === mediumId) || maj.mediums[0] : null;
-      if (!med || !med.minors.length) return `<option value="">小分類なし</option>`;
-      return med.minors.map((s) => `<option value="${escapeAttr(s.id)}" ${s.id === selectedMinorId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+      if (!maj) return '';
+      const med = maj.mediums.find((m) => m.id === mediumId) || maj.mediums[0];
+      if (!med) return '';
+      return med.minors.map((n) => `<option value="${escapeAttr(n.id)}" ${n.id === selectedMinId ? 'selected' : ''}>${escapeHtml(n.name)}</option>`).join('');
     }
 
     function addItemRow(initial = null) {
       const container = document.getElementById('item-rows-container');
-      if (!container) return;
-
-      const defaultMaj = appState.categories[0]?.id || '';
-      const majId = initial?.majorId && appState.categories.some((c) => c.id === initial.majorId) ? initial.majorId : defaultMaj;
-      const majObj = appState.categories.find((c) => c.id === majId);
-      const medId = initial?.mediumId && majObj?.mediums.some((m) => m.id === initial.mediumId) ? initial.mediumId : (majObj?.mediums[0]?.id || '');
-      const medObj = majObj?.mediums.find((m) => m.id === medId);
-      const minId = initial?.minorId && medObj?.minors.some((s) => s.id === initial.minorId) ? initial.minorId : (medObj?.minors[0]?.id || '');
-
       const rowId = uid('row');
+
+      const defaultMaj = appState.categories[0];
+      const majorId = initial?.majorId && appState.categories.some((c) => c.id === initial.majorId) ? initial.majorId : (defaultMaj?.id || '');
+      const majObj = appState.categories.find((c) => c.id === majorId) || defaultMaj;
+      const mediumId = initial?.mediumId && majObj?.mediums.some((m) => m.id === initial.mediumId) ? initial.mediumId : (majObj?.mediums[0]?.id || '');
+      const medObj = majObj?.mediums.find((m) => m.id === mediumId) || majObj?.mediums[0];
+      const minorId = initial?.minorId && medObj?.minors.some((n) => n.id === initial.minorId) ? initial.minorId : (medObj?.minors[0]?.id || '');
+
       const card = document.createElement('div');
       card.id = rowId;
-      card.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2';
+      card.className = 'p-2.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2';
+      const initialPrice = initial?.price !== undefined ? Number(initial.price) : '';
+      const isNegative = initialPrice !== '' && initialPrice < 0;
 
       card.innerHTML = `
         <div class="flex items-center gap-1.5">
-          <input type="text" data-field="name" value="${escapeAttr(initial?.name || '')}" placeholder="商品名" required class="flex-1 min-w-0 px-2.5 py-2 text-xs border border-slate-300 rounded-xl bg-white">
+          <input type="text" data-field="name" value="${escapeAttr(initial?.name || '')}" placeholder="商品名・値引き等" required class="flex-1 min-w-0 px-2.5 py-2 text-xs border border-slate-300 rounded-xl bg-white">
           <div class="relative w-24 shrink-0">
             <span class="text-xs text-slate-400 absolute left-2 top-1/2 -translate-y-1/2">¥</span>
-            <input type="number" data-field="price" value="${initial?.price !== undefined ? Number(initial.price) : ''}" min="0" step="1" inputmode="numeric" placeholder="金額" required oninput="updateFormTotal()" class="w-full pl-5 pr-2 py-2 text-xs font-bold text-right border border-slate-300 rounded-xl bg-white">
+            <input type="number" data-field="price" value="${initialPrice}" step="1" placeholder="金額(-可)" required oninput="updateFormTotal()" class="w-full pl-5 pr-2 py-2 text-xs font-bold text-right border border-slate-300 rounded-xl bg-white ${isNegative ? 'text-rose-600' : 'text-slate-800'}">
           </div>
           <button type="button" data-action="remove-row" data-row-id="${escapeAttr(rowId)}" class="w-8 h-8 rounded-xl text-slate-400 active:text-rose-600 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
         <div class="grid grid-cols-3 gap-1.5">
-          <select data-field="majorId" class="w-full px-1.5 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">${buildMajorOptionsHtml(majId)}</select>
-          <select data-field="mediumId" class="w-full px-1.5 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">${buildMediumOptionsHtml(majId, medId)}</select>
-          <select data-field="minorId" class="w-full px-1.5 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">${buildMinorOptionsHtml(majId, medId, minId)}</select>
-        </div>`;
+          <select data-field="majorId" class="px-2 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">
+            ${buildMajorOptionsHtml(majorId)}
+          </select>
+          <select data-field="mediumId" class="px-2 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">
+            ${buildMediumOptionsHtml(majorId, mediumId)}
+          </select>
+          <select data-field="minorId" class="px-2 py-1.5 text-[11px] border border-slate-300 rounded-lg bg-white">
+            ${buildMinorOptionsHtml(majorId, mediumId, minorId)}
+          </select>
+        </div>
+      `;
 
-      const majSel = card.querySelector('select[data-field="majorId"]');
-      const medSel = card.querySelector('select[data-field="mediumId"]');
-      const minSel = card.querySelector('select[data-field="minorId"]');
+      const majSelect = card.querySelector('select[data-field="majorId"]');
+      const medSelect = card.querySelector('select[data-field="mediumId"]');
+      const minSelect = card.querySelector('select[data-field="minorId"]');
 
-      majSel.addEventListener('change', () => {
-        medSel.innerHTML = buildMediumOptionsHtml(majSel.value, '');
-        minSel.innerHTML = buildMinorOptionsHtml(majSel.value, medSel.value, '');
+      majSelect.addEventListener('change', () => {
+        const newMaj = appState.categories.find((c) => c.id === majSelect.value);
+        const firstMed = newMaj?.mediums[0]?.id || '';
+        const firstMin = newMaj?.mediums[0]?.minors[0]?.id || '';
+        medSelect.innerHTML = buildMediumOptionsHtml(majSelect.value, firstMed);
+        minSelect.innerHTML = buildMinorOptionsHtml(majSelect.value, firstMed, firstMin);
       });
-      medSel.addEventListener('change', () => {
-        minSel.innerHTML = buildMinorOptionsHtml(majSel.value, medSel.value, '');
+
+      medSelect.addEventListener('change', () => {
+        const newMaj = appState.categories.find((c) => c.id === majSelect.value);
+        const newMed = newMaj?.mediums.find((m) => m.id === medSelect.value);
+        const firstMin = newMed?.minors[0]?.id || '';
+        minSelect.innerHTML = buildMinorOptionsHtml(majSelect.value, medSelect.value, firstMin);
       });
 
       container.appendChild(card);
@@ -1613,13 +1563,12 @@
 
     function removeItemRow(rowId) {
       const container = document.getElementById('item-rows-container');
-      const target = document.getElementById(rowId);
-      if (!container || !target) return;
       if (container.children.length <= 1) {
-        showToast('最低1つの商品明細が必要です', 'warning');
+        showToast('最低1つの商品が必要です', 'error');
         return;
       }
-      target.remove();
+      const el = document.getElementById(rowId);
+      if (el) el.remove();
       updateFormTotal();
     }
 
@@ -1629,74 +1578,43 @@
       const cards = Array.from(container.children);
       let sum = 0;
       for (const card of cards) {
-        const p = Number(card.querySelector('input[data-field="price"]')?.value || 0);
-        if (Number.isFinite(p) && p > 0) sum += Math.round(p);
+        const priceInput = card.querySelector('input[data-field="price"]');
+        const p = Number(priceInput?.value || 0);
+        if (Number.isFinite(p)) {
+          sum += Math.round(p);
+          if (priceInput) {
+            priceInput.classList.toggle('text-rose-600', p < 0);
+            priceInput.classList.toggle('text-slate-800', p >= 0);
+          }
+        }
       }
       document.getElementById('form-item-count').textContent = String(cards.length);
-      document.getElementById('form-total-amount').textContent = `¥${sum.toLocaleString()}`;
+      document.getElementById('form-total-amount').textContent = sum < 0 ? `-¥${Math.abs(sum).toLocaleString()}` : `¥${sum.toLocaleString()}`;
     }
 
     function resetReceiptForm() {
       document.getElementById('editing-receipt-id').value = '';
       document.getElementById('editing-badge').classList.add('hidden');
       document.getElementById('submit-btn-label').textContent = 'この購入を登録する';
-
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      document.getElementById('form-date').value = `${yyyy}-${mm}-${dd}`;
-      document.getElementById('form-store').value = appState.stores[0] || '';
-      if (appState.payments.length > 0) document.getElementById('form-payment').value = appState.payments[0];
+      document.getElementById('form-date').value = getTodayDateStr();
+      document.getElementById('form-store').value = '';
       document.getElementById('form-memo').value = '';
-
+      if (appState.payments.length > 0) document.getElementById('form-payment').value = appState.payments[0];
       const container = document.getElementById('item-rows-container');
       container.innerHTML = '';
       addItemRow();
-      updateFormTotal();
-    }
-
-    function editReceipt(receiptId) {
-      const rec = appState.receipts.find((r) => r.id === receiptId);
-      if (!rec) return;
-
-      document.getElementById('editing-receipt-id').value = rec.id;
-      document.getElementById('editing-badge').classList.remove('hidden');
-      document.getElementById('submit-btn-label').textContent = '変更内容を更新する';
-
-      document.getElementById('form-date').value = rec.date;
-      document.getElementById('form-store').value = rec.store;
-      if (appState.payments.includes(rec.payment)) document.getElementById('form-payment').value = rec.payment;
-      document.getElementById('form-memo').value = rec.memo || '';
-
-      const container = document.getElementById('item-rows-container');
-      container.innerHTML = '';
-      for (const itm of rec.items || []) addItemRow(itm);
-      if (!rec.items || rec.items.length === 0) addItemRow();
-      updateFormTotal();
-
-      switchMobileView('entry');
-      showToast('編集モードで読み込みました', 'info');
-    }
-
-    async function deleteReceipt(receiptId) {
-      if (!(await showConfirm('購入履歴の削除', 'この購入履歴を削除しますか？', '削除する'))) return;
-      appState.receipts = appState.receipts.filter((r) => r.id !== receiptId);
-      saveState();
-      renderAll();
-      showToast('削除しました', 'success');
     }
 
     function saveReceipt(event) {
       event.preventDefault();
+      const editingId = document.getElementById('editing-receipt-id').value.trim();
       const date = sanitizeDate(document.getElementById('form-date').value);
       const store = sanitizeText(document.getElementById('form-store').value, 80);
       const payment = sanitizeText(document.getElementById('form-payment').value, 60);
-      const memo = sanitizeText(document.getElementById('form-memo').value, MAX_MEMO_LEN, '');
-      const editingId = document.getElementById('editing-receipt-id').value.trim();
+      const memo = sanitizeText(document.getElementById('form-memo').value, MAX_MEMO_LEN);
 
-      if (!date || !store) {
-        showToast('購入日と購入先を入力してください', 'error');
+      if (!date || !store || !payment) {
+        showToast('購入日・購入先・支払方法を入力してください', 'error');
         return;
       }
 
@@ -1704,361 +1622,154 @@
       const items = [];
       for (const card of cards) {
         const name = sanitizeText(card.querySelector('input[data-field="name"]')?.value, 100);
-        const price = sanitizePositiveInt(card.querySelector('input[data-field="price"]')?.value, -1);
+        const rawPriceStr = card.querySelector('input[data-field="price"]')?.value;
+        const price = rawPriceStr === '' || rawPriceStr === null ? NaN : sanitizeSignedInt(rawPriceStr, NaN);
         const majorId = card.querySelector('select[data-field="majorId"]')?.value || '';
         const mediumId = card.querySelector('select[data-field="mediumId"]')?.value || '';
         const minorId = card.querySelector('select[data-field="minorId"]')?.value || '';
-        if (!name || price < 0) {
-          showToast('すべての商品名と金額を入力してください', 'error');
+        if (!name || !Number.isFinite(price)) {
+          showToast('すべての商品名と金額（値引きはマイナス）を入力してください', 'error');
           return;
         }
         items.push({ id: uid('itm'), name, price, majorId, mediumId, minorId });
       }
 
-      if (!appState.stores.includes(store)) appState.stores.unshift(store);
+      if (!appState.stores.includes(store)) {
+        appState.stores.unshift(store);
+        syncFormMasterOptions();
+      }
 
       if (editingId) {
         const idx = appState.receipts.findIndex((r) => r.id === editingId);
-        if (idx !== -1) appState.receipts[idx] = { ...appState.receipts[idx], date, store, payment, memo, items };
-        showToast('購入データを更新しました', 'success');
+        if (idx !== -1) {
+          appState.receipts[idx] = { id: editingId, date, store, payment, memo, items };
+          showToast('購入履歴を更新しました');
+        }
       } else {
         appState.receipts.unshift({ id: uid('rec'), date, store, payment, memo, items });
-        showToast('家計簿に登録しました', 'success');
+        showToast('新しい購入を登録しました');
       }
 
-      saveState();
+      saveAppState();
       currentMonth = date.slice(0, 7);
-      const picker = document.getElementById('current-month-picker');
-      if (picker) picker.value = currentMonth;
-
+      document.getElementById('current-month-picker').value = currentMonth;
       resetReceiptForm();
-      renderAll();
       switchMobileView('summary');
     }
 
-    // =========================================================================
-    // 8. カメラ撮影＆画像変換＆Gemini AI＆標準OCR＆テキスト解析
-    // =========================================================================
-    function buildEnhancedCanvasFromImage(imgEl, enhanceContrast = false) {
-      const maxDim = 1600;
-      const origW = imgEl.naturalWidth || imgEl.width || 800;
-      const origH = imgEl.naturalHeight || imgEl.height || 1000;
-      const scale = Math.min(1, maxDim / Math.max(origW, origH));
-      const w = Math.max(1, Math.round(origW * scale));
-      const h = Math.max(1, Math.round(origH * scale));
-
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(imgEl, 0, 0, w, h);
-
-      if (enhanceContrast) {
-        const imgData = ctx.getImageData(0, 0, w, h);
-        const d = imgData.data;
-        const factor = 1.45;
-        for (let i = 0; i < d.length; i += 4) {
-          const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-          const contrasted = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
-          d[i] = d[i + 1] = d[i + 2] = contrasted;
-        }
-        ctx.putImageData(imgData, 0, 0);
-      }
-      return canvas;
-    }
-
-    function toggleTextPasteBox() {
-      document.getElementById('text-paste-box')?.classList.toggle('hidden');
-    }
-
-    function handleReceiptImageUpload(event) {
-      const file = event.target?.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => setPreviewImageDataUrl(e.target.result);
-      reader.readAsDataURL(file);
-      event.target.value = '';
-    }
-
-    function setPreviewImageDataUrl(dataUrl) {
-      const img = document.getElementById('receipt-preview-img');
-      const wrapper = document.getElementById('receipt-preview-wrapper');
-      const errBox = document.getElementById('ai-error-detail-box');
-      if (!img || !wrapper) return;
-      img.src = dataUrl;
-      wrapper.classList.remove('hidden');
-      if (errBox) errBox.classList.add('hidden');
-    }
-
-    function clearReceiptImage() {
-      const img = document.getElementById('receipt-preview-img');
-      const wrapper = document.getElementById('receipt-preview-wrapper');
-      const progBox = document.getElementById('ocr-progress-box');
-      const errBox = document.getElementById('ai-error-detail-box');
-      if (img) img.src = '';
-      if (wrapper) wrapper.classList.add('hidden');
-      if (progBox) progBox.classList.add('hidden');
-      if (errBox) errBox.classList.add('hidden');
-    }
-
-    function renderReceiptQueueUI() {
-      const countEl = document.getElementById('queued-receipt-count');
-      const analyzeCountEl = document.getElementById('queued-analyze-count');
-      const analyzeBtn = document.getElementById('analyze-queued-receipts-btn');
-      const clearBtn = document.getElementById('clear-receipt-queue-btn');
-      const thumbsEl = document.getElementById('queued-receipt-thumbnails');
-      const n = receiptImageQueue.length;
-
-      if (countEl) countEl.textContent = String(n);
-      if (analyzeCountEl) analyzeCountEl.textContent = String(n);
-      if (analyzeBtn) analyzeBtn.classList.toggle('hidden', n === 0);
-      if (clearBtn) clearBtn.classList.toggle('hidden', n === 0);
-
-      if (thumbsEl) {
-        thumbsEl.classList.toggle('hidden', n === 0);
-        thumbsEl.innerHTML = receiptImageQueue
-          .map((item, idx) => `
-            <div class="relative w-12 h-16 rounded-lg border border-indigo-300 bg-white overflow-hidden shrink-0">
-              <img src="${escapeAttr(item.dataUrl)}" alt="分割${idx + 1}" class="w-full h-full object-cover">
-              <span class="absolute bottom-0 inset-x-0 bg-slate-900/75 text-white text-[9px] font-bold text-center">${idx + 1}枚目</span>
-              <button type="button" data-action="remove-queued-img" data-idx="${idx}" class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] flex items-center justify-center">×</button>
-            </div>
-          `)
-          .join('');
-      }
-    }
-
-    function addCurrentPreviewToQueueAndCamera() {
-      const imgEl = document.getElementById('receipt-preview-img');
-      if (!imgEl || !imgEl.src || imgEl.src.startsWith('data:,')) {
-        showToast('先にレシート画像を選択または撮影してください', 'warning');
-        return;
-      }
-      if (receiptImageQueue.length >= 6) {
-        showToast('一度にまとめられる分割画像は最大6枚までです', 'warning');
-        return;
-      }
-      receiptImageQueue.push({ id: uid('qimg'), dataUrl: imgEl.src });
-      renderReceiptQueueUI();
-      clearReceiptImage();
-      showToast(`${receiptImageQueue.length}枚目を保存しました。次の部分を撮影してください。`, 'info');
-      startReceiptCamera();
-    }
-
-    function removeQueuedReceiptImage(idx) {
-      if (idx < 0 || idx >= receiptImageQueue.length) return;
-      receiptImageQueue.splice(idx, 1);
-      renderReceiptQueueUI();
-      showToast('ストック画像を1枚削除しました', 'info');
-    }
-
-    function clearReceiptQueue() {
-      receiptImageQueue = [];
-      renderReceiptQueueUI();
-      showToast('分割ストックをクリアしました', 'info');
-    }
-
-    async function startReceiptCamera(deviceId = null) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showToast('このブラウザまたは環境ではカメラ起動がサポートされていません（HTTPS環境が必要です）', 'error');
-        return;
-      }
-
-      stopReceiptCamera();
-      const boxEl = document.getElementById('camera-capture-box');
-      const videoEl = document.getElementById('camera-video');
-      const switchBtn = document.getElementById('switch-camera-btn');
-
-      try {
-        const constraints = deviceId
-          ? { video: { deviceId: { exact: deviceId } }, audio: false }
-          : { video: { facingMode: { ideal: cameraFacingMode }, width: { ideal: 1280 }, height: { ideal: 1920 } }, audio: false };
-
-        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (videoEl) {
-          videoEl.srcObject = cameraStream;
-          await videoEl.play().catch(() => {});
-        }
-        if (boxEl) boxEl.classList.remove('hidden');
-
-        if (navigator.mediaDevices.enumerateDevices) {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          availableVideoDevices = devices.filter((d) => d.kind === 'videoinput');
-          if (switchBtn) switchBtn.classList.toggle('hidden', availableVideoDevices.length <= 1);
-        }
-      } catch (err) {
-        console.error('カメラ起動エラー:', err);
-        showToast('カメラを起動できませんでした。ブラウザのカメラ権限とHTTPS接続をご確認ください。', 'error');
-      }
-    }
-
-    function applyParsedReceiptResultToForm(parsed, usedModel, appendMode = false) {
-      const validDate = sanitizeDate(parsed.date);
-      if (validDate) document.getElementById('form-date').value = validDate;
-
-      const cleanStore = sanitizeText(parsed.store, 80);
-      if (cleanStore) document.getElementById('form-store').value = cleanStore;
-
-      if (parsed.payment) {
-        const matchedPay = appState.payments.find((p) => parsed.payment.includes(p) || p.includes(parsed.payment));
-        if (matchedPay) document.getElementById('form-payment').value = matchedPay;
-      }
-
-      const items = Array.isArray(parsed.items) ? parsed.items : [];
-      if (items.length === 0) {
-        if (!appendMode) showToast('AIで商品明細を検出できませんでした', 'warning');
-        return 0;
-      }
+    function startEditReceipt(receiptId) {
+      const rec = appState.receipts.find((r) => r.id === receiptId);
+      if (!rec) return;
+      document.getElementById('editing-receipt-id').value = rec.id;
+      document.getElementById('editing-badge').classList.remove('hidden');
+      document.getElementById('submit-btn-label').textContent = '変更を保存する';
+      document.getElementById('form-date').value = rec.date;
+      document.getElementById('form-store').value = rec.store;
+      document.getElementById('form-payment').value = rec.payment;
+      document.getElementById('form-memo').value = rec.memo || '';
 
       const container = document.getElementById('item-rows-container');
-      if (!appendMode) {
-        container.innerHTML = '';
-      } else if (container.children.length === 1) {
-        const firstName = (container.children[0].querySelector('input[data-field="name"]')?.value || '').trim();
-        const firstPrice = Number(container.children[0].querySelector('input[data-field="price"]')?.value || 0);
-        if (!firstName && (!firstPrice || firstPrice === 0)) {
-          container.innerHTML = '';
-        }
-      }
-
-      for (const itm of items) {
-        addItemRow({
-          name: sanitizeText(itm.name, 100, '商品'),
-          price: sanitizePositiveInt(itm.price, 0),
-          majorId: itm.majorId,
-          mediumId: itm.mediumId,
-          minorId: itm.minorId
-        });
-      }
-      updateFormTotal();
-      return items.length;
+      container.innerHTML = '';
+      for (const itm of rec.items || []) addItemRow(itm);
+      switchMobileView('entry');
+      showToast('編集モードに切り替えました', 'info');
     }
 
-    async function analyzeQueuedReceiptsWithGemini() {
-      if (receiptImageQueue.length === 0) {
-        showToast('ストックされた画像がありません', 'warning');
-        return;
-      }
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        showToast('先に「AI設定」からGemini APIキーを登録してください', 'warning');
+    async function deleteReceipt(receiptId) {
+      const rec = appState.receipts.find((r) => r.id === receiptId);
+      if (!rec) return;
+      const ok = await showConfirm('購入履歴の削除', `${rec.date}「${rec.store}」を削除しますか？`);
+      if (!ok) return;
+      appState.receipts = appState.receipts.filter((r) => r.id !== receiptId);
+      saveAppState();
+      if (document.getElementById('editing-receipt-id').value === receiptId) resetReceiptForm();
+      refreshDashboard();
+      showToast('削除しました');
+    }
+
+    // =========================================================================
+    // 5. スマホカメラ撮影・Gemini AI解析・OCR・テキスト解析
+    // =========================================================================
+    let activeCameraStream = null;
+    let cameraFacingMode = 'environment';
+    let queuedReceiptDataUrls = [];
+
+    function toggleTextPasteBox() {
+      document.getElementById('text-paste-box').classList.toggle('hidden');
+    }
+
+    async function startReceiptCamera() {
+      const box = document.getElementById('camera-capture-box');
+      const video = document.getElementById('camera-video');
+      const switchBtn = document.getElementById('switch-camera-btn');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('カメラを起動できない環境です。写真ライブラリ選択をご利用ください', 'error');
         return;
       }
 
-      const qBtn = document.getElementById('analyze-queued-receipts-btn');
-      const progBox = document.getElementById('ocr-progress-box');
-      const statusEl = document.getElementById('ocr-status-text');
-      const pctEl = document.getElementById('ocr-percent-text');
-      const barEl = document.getElementById('ocr-progress-bar');
-      const errBox = document.getElementById('ai-error-detail-box');
-      if (errBox) errBox.classList.add('hidden');
+      stopReceiptCamera(false);
+      box.classList.remove('hidden');
 
       try {
-        if (qBtn) qBtn.disabled = true;
-        if (progBox) progBox.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = `${receiptImageQueue.length}枚の分割レシートをAIで統合解析中...`;
-        if (pctEl) pctEl.textContent = '45%';
-        if (barEl) barEl.style.width = '45%';
+        activeCameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: cameraFacingMode },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        video.srcObject = activeCameraStream;
+        await video.play();
 
-        const imageParts = [];
-        for (const qItem of receiptImageQueue) {
-          const tempImg = new Image();
-          await new Promise((resolve, reject) => {
-            tempImg.onload = resolve;
-            tempImg.onerror = reject;
-            tempImg.src = qItem.dataUrl;
-          });
-          const canvas = buildEnhancedCanvasFromImage(tempImg, false);
-          const base64Data = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
-          imageParts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Data } });
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+          switchBtn.classList.toggle('hidden', videoInputs.length < 2);
+        } catch (e) {
+          switchBtn.classList.add('hidden');
         }
-
-        const categoryListText = buildCategoryHierarchyPromptText();
-        const promptText = `あなたは日本の家計簿アシスタントです。添付された複数枚の画像は、1枚の長いレシートを上から下へ分割撮影したものです（重なり部分がある場合は重複商品を除いて統合してください）。
-全画像を通して購入日・購入先店舗名・支払方法（読み取れる場合）・購入商品リストを漏れなく抽出し、各商品について以下のカテゴリー一覧から最も適切な majorId, mediumId, minorId を選択してください。割引・値引行がある場合は実支払額ベースで整理し、小計・合計・消費税合計欄・お釣りは商品リストに含めないでください。
-
-【利用可能なカテゴリー一覧】
-${categoryListText}`;
-
-        const payload = {
-          contents: [{ role: 'user', parts: [{ text: promptText }, ...imageParts] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                date: { type: 'STRING', description: 'YYYY-MM-DD形式の購入日。不明な場合は空文字' },
-                store: { type: 'STRING', description: '店舗名・購入先' },
-                payment: { type: 'STRING', description: '支払方法。不明なら空文字' },
-                items: {
-                  type: 'ARRAY',
-                  items: {
-                    type: 'OBJECT',
-                    properties: {
-                      name: { type: 'STRING' },
-                      price: { type: 'INTEGER' },
-                      majorId: { type: 'STRING' },
-                      mediumId: { type: 'STRING' },
-                      minorId: { type: 'STRING' }
-                    },
-                    required: ['name', 'price', 'majorId', 'mediumId', 'minorId']
-                  }
-                }
-              },
-              required: ['date', 'store', 'items']
-            }
-          }
-        };
-
-        const preferredModel = getGeminiModel();
-        const { data: result, usedModel } = await callGeminiWithFallback(apiKey, payload, preferredModel);
-        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) throw new Error('AIから有効な応答テキストが返りませんでした');
-
-        const cleanedJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-        const parsed = JSON.parse(cleanedJson);
-
-        if (pctEl) pctEl.textContent = '100%';
-        if (barEl) barEl.style.width = '100%';
-        if (statusEl) statusEl.textContent = `分割統合AI解析完了 (${usedModel})`;
-
-        const addedCount = applyParsedReceiptResultToForm(parsed, usedModel, false);
-        receiptImageQueue = [];
-        renderReceiptQueueUI();
-        showToast(`分割レシートから${addedCount}点の商品を統合解析・自動分類しました`, 'success');
       } catch (err) {
-        console.error('分割レシートAI解析エラー:', err);
-        if (progBox) progBox.classList.add('hidden');
-        if (errBox) {
-          errBox.textContent = `詳細エラー: ${err.message}`;
-          errBox.classList.remove('hidden');
-        }
-        showToast('分割レシートのAI解析に失敗しました。詳細エラーを確認してください。', 'error');
-      } finally {
-        if (qBtn) qBtn.disabled = false;
+        box.classList.add('hidden');
+        showToast('カメラの起動が許可されていないか、カメラが見つかりません', 'error');
       }
     }
 
-    function stopReceiptCamera() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach((t) => t.stop());
-        cameraStream = null;
+    function stopReceiptCamera(hideBox = true) {
+      if (activeCameraStream) {
+        activeCameraStream.getTracks().forEach((t) => t.stop());
+        activeCameraStream = null;
       }
-      const videoEl = document.getElementById('camera-video');
-      const boxEl = document.getElementById('camera-capture-box');
-      if (videoEl) videoEl.srcObject = null;
-      if (boxEl) boxEl.classList.add('hidden');
+      const video = document.getElementById('camera-video');
+      if (video) video.srcObject = null;
+      if (hideBox) document.getElementById('camera-capture-box').classList.add('hidden');
     }
 
     async function switchReceiptCamera() {
-      if (availableVideoDevices.length > 1) {
-        currentDeviceIndex = (currentDeviceIndex + 1) % availableVideoDevices.length;
-        await startReceiptCamera(availableVideoDevices[currentDeviceIndex].deviceId);
+      cameraFacingMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
+      await startReceiptCamera();
+    }
+
+    function captureReceiptPhoto() {
+      const video = document.getElementById('camera-video');
+      const canvas = document.getElementById('camera-capture-canvas');
+      if (!video || !video.videoWidth) {
+        showToast('カメラ映像の準備中です。少し待って再度押してください', 'error');
+        return;
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      stopReceiptCamera(true);
+      setReceiptPreviewImage(dataUrl);
+
+      if (getSavedGeminiApiKey()) {
+        runGeminiReceiptAnalysis();
       } else {
-        cameraFacingMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
-        await startReceiptCamera();
+        runReceiptOCR();
       }
     }
 
@@ -2067,98 +1778,180 @@ ${categoryListText}`;
       startReceiptCamera();
     }
 
-    async function captureReceiptPhoto() {
-      const videoEl = document.getElementById('camera-video');
-      const canvas = document.getElementById('camera-capture-canvas');
-      if (!videoEl || !canvas || !videoEl.videoWidth) return;
+    function setReceiptPreviewImage(dataUrl) {
+      document.getElementById('receipt-preview-img').src = dataUrl;
+      document.getElementById('receipt-preview-wrapper').classList.remove('hidden');
+      updateGeminiKeyBadge();
+    }
 
-      canvas.width = videoEl.videoWidth;
-      canvas.height = videoEl.videoHeight;
-      canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    function renderReceiptQueueUI() {
+      const count = queuedReceiptDataUrls.length;
+      const countEl = document.getElementById('queued-receipt-count');
+      const analyzeCountEl = document.getElementById('queued-analyze-count');
+      const thumbsEl = document.getElementById('queued-receipt-thumbnails');
+      const analyzeBtn = document.getElementById('analyze-queued-receipts-btn');
+      const clearBtn = document.getElementById('clear-receipt-queue-btn');
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-      stopReceiptCamera();
-      setPreviewImageDataUrl(dataUrl);
-      if (getGeminiApiKey()) {
-        showToast('撮影しました。Gemini AIでレシート解析を開始します...', 'info');
-        await runGeminiReceiptAnalysis();
-      } else {
-        showToast('撮影しました。標準OCR解析を開始します...', 'info');
-        await runReceiptOCR();
+      if (countEl) countEl.textContent = String(count);
+      if (analyzeCountEl) analyzeCountEl.textContent = String(count);
+      if (clearBtn) clearBtn.classList.toggle('hidden', count === 0);
+      if (analyzeBtn) analyzeBtn.classList.toggle('hidden', count === 0);
+
+      if (!thumbsEl) return;
+      if (count === 0) {
+        thumbsEl.classList.add('hidden');
+        thumbsEl.innerHTML = '';
+        return;
       }
+      thumbsEl.classList.remove('hidden');
+      thumbsEl.innerHTML = queuedReceiptDataUrls
+        .map((url, idx) => `
+          <div class="relative shrink-0 w-11 h-14 rounded-lg border border-indigo-300 overflow-hidden bg-white">
+            <img src="${url}" alt="分割${idx + 1}" class="w-full h-full object-cover">
+            <span class="absolute bottom-0 inset-x-0 bg-indigo-900/75 text-white text-[9px] text-center">${idx + 1}枚目</span>
+          </div>
+        `)
+        .join('');
+    }
+
+    function addCurrentPreviewToQueueAndCamera() {
+      const img = document.getElementById('receipt-preview-img');
+      if (!img || !img.src || !img.src.startsWith('data:')) {
+        showToast('先にレシート画像を撮影または選択してください', 'error');
+        return;
+      }
+      if (queuedReceiptDataUrls.length >= 6) {
+        showToast('分割ストックは最大6枚まで追加できます', 'error');
+        return;
+      }
+      queuedReceiptDataUrls.push(img.src);
+      renderReceiptQueueUI();
+      showToast(`${queuedReceiptDataUrls.length}枚目をストックしました。次の部分を撮影してください`, 'info');
+      clearReceiptImage();
+      startReceiptCamera();
+    }
+
+    function clearReceiptQueue() {
+      queuedReceiptDataUrls = [];
+      renderReceiptQueueUI();
+      showToast('分割ストックをクリアしました', 'info');
+    }
+
+    function handleReceiptImageUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setReceiptPreviewImage(reader.result);
+      reader.readAsDataURL(file);
+    }
+
+    function clearReceiptImage() {
+      document.getElementById('receipt-image-input').value = '';
+      document.getElementById('receipt-preview-img').src = '';
+      document.getElementById('receipt-preview-wrapper').classList.add('hidden');
+      document.getElementById('ocr-progress-box').classList.add('hidden');
+    }
+
+    function buildEnhancedCanvasFromImage(imgElement, enhanceContrast = true) {
+      const canvas = document.createElement('canvas');
+      const maxDim = 2200;
+      let w = imgElement.naturalWidth || imgElement.width || 800;
+      let h = imgElement.naturalHeight || imgElement.height || 1000;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgElement, 0, 0, w, h);
+
+      if (enhanceContrast) {
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.45 + 135));
+          data[i] = contrasted;
+          data[i + 1] = contrasted;
+          data[i + 2] = contrasted;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+      return canvas;
     }
 
     async function runReceiptOCR() {
-      const imgEl = document.getElementById('receipt-preview-img');
-      if (!imgEl || !imgEl.src) {
-        showToast('先にレシート画像を選択または撮影してください', 'warning');
+      const img = document.getElementById('receipt-preview-img');
+      if (!img.src) {
+        showToast('先にレシート画像を撮影または選択してください', 'error');
         return;
       }
       if (typeof Tesseract === 'undefined') {
-        showToast('OCRライブラリの読み込み中です', 'warning');
+        showToast('OCRエンジン読込中です。少し待って再度お試しください', 'error');
         return;
       }
 
-      const ocrBtn = document.getElementById('run-ocr-btn');
-      const progBox = document.getElementById('ocr-progress-box');
-      const statusEl = document.getElementById('ocr-status-text');
-      const pctEl = document.getElementById('ocr-percent-text');
-      const barEl = document.getElementById('ocr-progress-bar');
+      const btn = document.getElementById('run-ocr-btn');
+      const progressBox = document.getElementById('ocr-progress-box');
+      const statusText = document.getElementById('ocr-status-text');
+      const percentText = document.getElementById('ocr-percent-text');
+      const progressBar = document.getElementById('ocr-progress-bar');
+
+      btn.disabled = true;
+      progressBox.classList.remove('hidden');
+      statusText.textContent = '標準OCR処理中...';
+      percentText.textContent = '0%';
+      progressBar.style.width = '0%';
 
       try {
-        if (ocrBtn) ocrBtn.disabled = true;
-        if (progBox) progBox.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = '標準OCRエンジン準備中...';
-        if (pctEl) pctEl.textContent = '10%';
-        if (barEl) barEl.style.width = '10%';
-
-        const enhance = Boolean(document.getElementById('ocr-enhance-contrast')?.checked);
-        const canvas = buildEnhancedCanvasFromImage(imgEl, enhance);
-
+        const enhance = document.getElementById('ocr-enhance-contrast')?.checked ?? true;
+        const canvas = buildEnhancedCanvasFromImage(img, enhance);
         const result = await Tesseract.recognize(canvas, 'jpn+eng', {
           logger: (m) => {
-            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+            if (m.status) statusText.textContent = m.status === 'recognizing text' ? '文字認識中...' : 'データ準備中...';
+            if (typeof m.progress === 'number') {
               const pct = Math.round(m.progress * 100);
-              if (statusEl) statusEl.textContent = '文字認識中...';
-              if (pctEl) pctEl.textContent = `${pct}%`;
-              if (barEl) barEl.style.width = `${pct}%`;
+              percentText.textContent = `${pct}%`;
+              progressBar.style.width = `${pct}%`;
             }
           }
         });
-
-        const text = result?.data?.text || '';
-        const ta = document.getElementById('receipt-raw-text');
-        if (ta) ta.value = text;
-        if (!text.trim()) {
-          showToast('文字を読み取れませんでした', 'warning');
-          return;
-        }
-        parseReceiptTextToForm(text);
-      } catch (err) {
-        console.error('標準OCRエラー:', err);
-        showToast('標準OCR解析中にエラーが発生しました', 'error');
+        document.getElementById('receipt-raw-text').value = (result?.data?.text || '').trim();
+        document.getElementById('text-paste-box').classList.remove('hidden');
+        parseReceiptTextToForm();
+        showToast('レシートの読み取りが完了しました');
+      } catch (e) {
+        showToast('文字認識に失敗しました', 'error');
       } finally {
-        if (ocrBtn) ocrBtn.disabled = false;
+        btn.disabled = false;
       }
     }
 
-    // =========================================================================
-    // 8-B. Gemini APIキー・モデル設定＆AIレシート画像解析
-    // =========================================================================
-    function getGeminiApiKey() {
+    function getSavedGeminiApiKey() {
       try {
         return (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim();
-      } catch {
+      } catch (e) {
         return '';
       }
     }
 
-    function getGeminiModel() {
+    function getSavedGeminiModel() {
       try {
-        return (localStorage.getItem(GEMINI_MODEL_STORAGE) || DEFAULT_GEMINI_MODEL).trim() || DEFAULT_GEMINI_MODEL;
-      } catch {
+        const val = (localStorage.getItem(GEMINI_MODEL_STORAGE) || '').trim();
+        return val || DEFAULT_GEMINI_MODEL;
+      } catch (e) {
         return DEFAULT_GEMINI_MODEL;
       }
+    }
+
+    function getModelsToTry() {
+      const configured = getSavedGeminiModel();
+      if (configured === 'auto') {
+        return [...FALLBACK_MODELS];
+      }
+      return [configured, ...FALLBACK_MODELS.filter((m) => m !== configured)];
     }
 
     function onGeminiModelSelectChange() {
@@ -2168,33 +1961,16 @@ ${categoryListText}`;
       customInput.classList.toggle('hidden', sel.value !== 'custom');
     }
 
-    function updateGeminiKeyStatusUI() {
-      const key = getGeminiApiKey();
-      const model = getGeminiModel();
+    function updateGeminiKeyBadge() {
+      const key = getSavedGeminiApiKey();
+      const model = getSavedGeminiModel();
       const badge = document.getElementById('gemini-key-status-badge');
-      const input = document.getElementById('gemini-api-key-input');
-      const sel = document.getElementById('gemini-model-select');
-      const customInput = document.getElementById('gemini-custom-model-input');
-
-      if (badge) {
-        const modelLabel = model === 'auto' ? '自動選択' : model;
-        badge.innerHTML = key
-          ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-0.5"></i>AI設定済 (${escapeHtml(modelLabel)})</span>`
-          : `<span class="text-slate-400">Gemini APIキー: 未設定</span>`;
-      }
-      if (input && key) input.value = key;
-      if (sel) {
-        const hasOption = Array.from(sel.options).some((o) => o.value === model && o.value !== 'custom');
-        if (hasOption) {
-          sel.value = model;
-          if (customInput) customInput.classList.add('hidden');
-        } else {
-          sel.value = 'custom';
-          if (customInput) {
-            customInput.value = model;
-            customInput.classList.remove('hidden');
-          }
-        }
+      if (!badge) return;
+      const modelLabel = model === 'auto' ? '自動選択' : model;
+      if (key) {
+        badge.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-0.5"></i>API設定済 (${escapeHtml(modelLabel)})</span>`;
+      } else {
+        badge.innerHTML = `<span class="text-amber-600 font-medium"><i class="fa-solid fa-circle-exclamation mr-0.5"></i>APIキー未設定</span>`;
       }
     }
 
@@ -2203,38 +1979,24 @@ ${categoryListText}`;
       switchMasterTab('ai');
     }
 
-    function saveGeminiApiKey() {
+    function loadGeminiKeyToInput() {
       const input = document.getElementById('gemini-api-key-input');
-      const sel = document.getElementById('gemini-model-select');
+      if (input) input.value = getSavedGeminiApiKey();
+
+      const modelSelect = document.getElementById('gemini-model-select');
       const customInput = document.getElementById('gemini-custom-model-input');
-      const val = (input?.value || '').trim();
-      const selectedModel = sel?.value === 'custom'
-        ? sanitizeText(customInput?.value || '', 80, DEFAULT_GEMINI_MODEL)
-        : (sel?.value || DEFAULT_GEMINI_MODEL);
-
-      if (!val) {
-        showToast('APIキーを入力してください', 'warning');
-        return;
+      if (modelSelect && customInput) {
+        const savedModel = getSavedGeminiModel();
+        const presetValues = Array.from(modelSelect.options).map((o) => o.value);
+        if (presetValues.includes(savedModel) && savedModel !== 'custom') {
+          modelSelect.value = savedModel;
+          customInput.classList.add('hidden');
+        } else {
+          modelSelect.value = 'custom';
+          customInput.value = savedModel;
+          customInput.classList.remove('hidden');
+        }
       }
-      try {
-        localStorage.setItem(GEMINI_KEY_STORAGE, val);
-        localStorage.setItem(GEMINI_MODEL_STORAGE, selectedModel);
-        updateGeminiKeyStatusUI();
-        const label = selectedModel === 'auto' ? '自動選択' : selectedModel;
-        showToast(`AI設定（${label}）を保存しました`, 'success');
-      } catch {
-        showToast('AI設定の保存に失敗しました', 'error');
-      }
-    }
-
-    function clearGeminiApiKey() {
-      try {
-        localStorage.removeItem(GEMINI_KEY_STORAGE);
-        const input = document.getElementById('gemini-api-key-input');
-        if (input) input.value = '';
-        updateGeminiKeyStatusUI();
-        showToast('Gemini APIキーを削除しました', 'info');
-      } catch {}
     }
 
     function toggleGeminiKeyVisibility() {
@@ -2243,88 +2005,118 @@ ${categoryListText}`;
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    async function callGeminiWithFallback(apiKey, payload, preferredModel) {
-      const candidates = preferredModel === 'auto'
-        ? [...FALLBACK_MODELS]
-        : [preferredModel, ...FALLBACK_MODELS.filter((m) => m !== preferredModel)];
-
-      let lastErrorMessage = '';
-      for (const modelName of candidates) {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            return { data, usedModel: modelName };
-          }
-
-          let errDetail = '';
-          try {
-            const errJson = await response.json();
-            errDetail = errJson?.error?.message || JSON.stringify(errJson);
-          } catch {
-            errDetail = await response.text();
-          }
-          lastErrorMessage = `[${modelName}] HTTP ${response.status}: ${errDetail}`;
-
-          if (errDetail.toLowerCase().includes('api key not valid')) {
-            throw new Error(lastErrorMessage);
-          }
-        } catch (netErr) {
-          lastErrorMessage = netErr.message || String(netErr);
-          if (lastErrorMessage.toLowerCase().includes('api key not valid')) {
-            throw netErr;
-          }
-        }
-      }
-      throw new Error(lastErrorMessage || 'すべてのモデルで接続に失敗しました');
-    }
-
-    async function testGeminiConnection() {
+    function saveGeminiApiKey() {
       const input = document.getElementById('gemini-api-key-input');
-      const sel = document.getElementById('gemini-model-select');
-      const customInput = document.getElementById('gemini-custom-model-input');
-      const resBox = document.getElementById('ai-test-result-box');
-      const btn = document.getElementById('test-gemini-btn');
-
-      const apiKey = (input?.value || getGeminiApiKey()).trim();
-      const preferredModel = sel?.value === 'custom'
-        ? sanitizeText(customInput?.value || '', 80, DEFAULT_GEMINI_MODEL)
-        : (sel?.value || getGeminiModel());
-
-      if (!apiKey) {
-        showToast('先にGemini APIキーを入力してください', 'warning');
+      const val = (input?.value || '').trim();
+      if (!val) {
+        showToast('APIキーを入力してください', 'error');
         return;
       }
 
-      if (btn) btn.disabled = true;
-      if (resBox) {
-        resBox.className = 'rounded-xl p-2.5 text-[11px] bg-slate-100 text-slate-700';
-        resBox.textContent = '接続テスト中...';
-        resBox.classList.remove('hidden');
+      const modelSelect = document.getElementById('gemini-model-select');
+      const customInput = document.getElementById('gemini-custom-model-input');
+      let selectedModel = modelSelect ? modelSelect.value : DEFAULT_GEMINI_MODEL;
+      if (selectedModel === 'custom') {
+        selectedModel = (customInput?.value || '').trim() || DEFAULT_GEMINI_MODEL;
       }
 
       try {
-        const testPayload = {
-          contents: [{ role: 'user', parts: [{ text: 'OKとだけ返答してください。' }] }]
-        };
-        const { usedModel } = await callGeminiWithFallback(apiKey, testPayload, preferredModel);
-        if (resBox) {
-          resBox.className = 'rounded-xl p-2.5 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold';
-          resBox.textContent = `接続成功！使用可能モデル: ${usedModel}`;
+        localStorage.setItem(GEMINI_KEY_STORAGE, val);
+        localStorage.setItem(GEMINI_MODEL_STORAGE, selectedModel);
+        updateGeminiKeyBadge();
+        showToast(`Gemini AI設定（モデル: ${selectedModel}）を保存しました`);
+      } catch (e) {
+        showToast('保存に失敗しました', 'error');
+      }
+    }
+
+    function clearGeminiApiKey() {
+      try {
+        localStorage.removeItem(GEMINI_KEY_STORAGE);
+        localStorage.removeItem(GEMINI_MODEL_STORAGE);
+        const input = document.getElementById('gemini-api-key-input');
+        if (input) input.value = '';
+        loadGeminiKeyToInput();
+        updateGeminiKeyBadge();
+        showToast('Gemini APIキーを削除しました', 'info');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function callGeminiWithFallback(apiKey, requestBody, onModelAttempt = null) {
+      const models = getModelsToTry();
+      let lastErrorMsg = '';
+      for (const modelName of models) {
+        if (onModelAttempt) onModelAttempt(modelName);
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+          if (response.ok) {
+            const data = await response.json();
+            return { data, modelUsed: modelName };
+          }
+          const errJson = await response.json().catch(() => ({}));
+          const apiMsg = errJson?.error?.message || `HTTP ${response.status}`;
+          lastErrorMsg = `[${modelName}] HTTP ${response.status}: ${apiMsg}`;
+          if (response.status === 400 && apiMsg.toLowerCase().includes('api key not valid')) {
+            throw new Error(lastErrorMsg);
+          }
+        } catch (err) {
+          if (err.message && err.message.includes('API key not valid')) {
+            throw err;
+          }
+          lastErrorMsg = err.message || lastErrorMsg || 'ネットワーク接続エラー';
         }
+      }
+      throw new Error(lastErrorMsg || '利用可能なGeminiモデルに接続できませんでした');
+    }
+
+    async function testGeminiConnection() {
+      const keyInput = document.getElementById('gemini-api-key-input');
+      const apiKey = (keyInput?.value || getSavedGeminiApiKey()).trim();
+      const resultBox = document.getElementById('ai-test-result-box');
+      const testBtn = document.getElementById('test-gemini-btn');
+
+      if (!apiKey) {
+        showToast('先にGemini APIキーを入力してください', 'error');
+        return;
+      }
+
+      const modelSelect = document.getElementById('gemini-model-select');
+      const customInput = document.getElementById('gemini-custom-model-input');
+      let selectedModel = modelSelect ? modelSelect.value : DEFAULT_GEMINI_MODEL;
+      if (selectedModel === 'custom') {
+        selectedModel = (customInput?.value || '').trim() || DEFAULT_GEMINI_MODEL;
+      }
+      localStorage.setItem(GEMINI_KEY_STORAGE, apiKey);
+      localStorage.setItem(GEMINI_MODEL_STORAGE, selectedModel);
+      updateGeminiKeyBadge();
+
+      testBtn.disabled = true;
+      resultBox.className = 'rounded-xl p-2.5 text-[11px] bg-blue-50 border border-blue-200 text-blue-700';
+      resultBox.textContent = 'Gemini APIへ接続テスト中...';
+      resultBox.classList.remove('hidden');
+
+      try {
+        const { modelUsed } = await callGeminiWithFallback(
+          apiKey,
+          { contents: [{ parts: [{ text: 'Reply with OK' }] }] },
+          (m) => { resultBox.textContent = `接続テスト中... (${m})`; }
+        );
+        resultBox.className = 'rounded-xl p-2.5 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium';
+        resultBox.textContent = `接続成功！使用可能モデル: ${modelUsed}`;
+        showToast(`Gemini接続テスト成功 (${modelUsed})`);
       } catch (err) {
-        if (resBox) {
-          resBox.className = 'rounded-xl p-2.5 text-[11px] bg-rose-50 border border-rose-200 text-rose-700 break-all';
-          resBox.textContent = `接続失敗: ${err.message}`;
-        }
+        resultBox.className = 'rounded-xl p-2.5 text-[11px] bg-rose-50 border border-rose-200 text-rose-700 break-all';
+        resultBox.textContent = `接続エラー: ${err.message}`;
+        showToast('接続テストに失敗しました。エラー詳細を確認してください', 'error');
       } finally {
-        if (btn) btn.disabled = false;
+        testBtn.disabled = false;
       }
     }
 
@@ -2333,58 +2125,247 @@ ${categoryListText}`;
       for (const maj of appState.categories) {
         for (const med of maj.mediums) {
           for (const min of med.minors) {
-            lines.push(`- majorId="${maj.id}" (${maj.name}) > mediumId="${med.id}" (${med.name}) > minorId="${min.id}" (${min.name})`);
+            lines.push(`majorId="${maj.id}" (${maj.name}) > mediumId="${med.id}" (${med.name}) > minorId="${min.id}" (${min.name})`);
           }
         }
       }
       return lines.join('\n');
     }
 
-    async function runGeminiReceiptAnalysis() {
-      const imgEl = document.getElementById('receipt-preview-img');
-      if (!imgEl || !imgEl.src) {
-        showToast('先にレシート画像を選択または撮影してください', 'warning');
-        return;
+    async function imageElementToJpegBase64(imgElement) {
+      const canvas = document.createElement('canvas');
+      const maxDim = 1800;
+      let w = imgElement.naturalWidth || imgElement.width || 800;
+      let h = imgElement.naturalHeight || imgElement.height || 1000;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgElement, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      return dataUrl.split(',')[1];
+    }
+
+    function dataUrlToCompressedJpegBase64(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const tempImg = new Image();
+        tempImg.onload = async () => {
+          try {
+            const b64 = await imageElementToJpegBase64(tempImg);
+            resolve(b64);
+          } catch (e) {
+            reject(e);
+          }
+        };
+        tempImg.onerror = () => reject(new Error('画像の変換に失敗しました'));
+        tempImg.src = dataUrl;
+      });
+    }
+
+    function applyParsedReceiptJsonToForm(parsed, modelUsed) {
+      if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+        document.getElementById('form-date').value = parsed.date;
+      }
+      if (parsed.store) {
+        document.getElementById('form-store').value = sanitizeText(parsed.store, 80);
+      }
+      if (parsed.payment) {
+        const matchedPay = appState.payments.find((p) => p.includes(parsed.payment) || parsed.payment.includes(p));
+        if (matchedPay) document.getElementById('form-payment').value = matchedPay;
       }
 
-      const apiKey = getGeminiApiKey();
+      const items = Array.isArray(parsed.items) ? parsed.items : [];
+      if (items.length === 0) throw new Error('商品明細を抽出できませんでした');
+
+      const container = document.getElementById('item-rows-container');
+      container.innerHTML = '';
+      for (const itm of items) {
+        addItemRow({
+          name: sanitizeText(itm.name, 100, '商品'),
+          price: sanitizeSignedInt(itm.price, 0),
+          majorId: itm.majorId,
+          mediumId: itm.mediumId,
+          minorId: itm.minorId
+        });
+      }
+
+      document.getElementById('receipt-raw-text').value = items
+        .map((i) => `${i.name} ¥${Number(i.price).toLocaleString()}`)
+        .join('\n');
+
+      showToast(`AIが${items.length}点の明細と分類を自動抽出しました (${modelUsed})`);
+    }
+
+    async function analyzeQueuedReceiptsWithGemini() {
+      const apiKey = getSavedGeminiApiKey();
       if (!apiKey) {
-        showToast('Gemini APIキーが未設定のため、標準OCRを実行します', 'info');
-        await runReceiptOCR();
+        showToast('先にAPIキーを設定してください', 'error');
+        openAiKeySettingsFromEntry();
         return;
       }
 
-      const aiBtn = document.getElementById('run-ai-ocr-btn');
-      const progBox = document.getElementById('ocr-progress-box');
-      const statusEl = document.getElementById('ocr-status-text');
-      const pctEl = document.getElementById('ocr-percent-text');
-      const barEl = document.getElementById('ocr-progress-bar');
-      const errBox = document.getElementById('ai-error-detail-box');
+      const imagesToSend = [...queuedReceiptDataUrls];
+      const currentImg = document.getElementById('receipt-preview-img');
+      if (currentImg && currentImg.src && currentImg.src.startsWith('data:') && !imagesToSend.includes(currentImg.src)) {
+        imagesToSend.push(currentImg.src);
+      }
 
-      if (errBox) errBox.classList.add('hidden');
+      if (imagesToSend.length === 0) {
+        showToast('解析するレシート画像がありません', 'error');
+        return;
+      }
+
+      const aiBtn = document.getElementById('analyze-queued-receipts-btn');
+      const progressBox = document.getElementById('ocr-progress-box');
+      const statusText = document.getElementById('ocr-status-text');
+      const percentText = document.getElementById('ocr-percent-text');
+      const progressBar = document.getElementById('ocr-progress-bar');
+      const errDetailBox = document.getElementById('ai-error-detail-box');
+
+      if (aiBtn) aiBtn.disabled = true;
+      if (errDetailBox) {
+        errDetailBox.classList.add('hidden');
+        errDetailBox.textContent = '';
+      }
+      progressBox.classList.remove('hidden');
+      statusText.textContent = `分割画像(${imagesToSend.length}枚)をまとめてGemini AIへ送信中...`;
+      percentText.textContent = '40%';
+      progressBar.style.width = '40%';
 
       try {
-        if (aiBtn) aiBtn.disabled = true;
-        if (progBox) progBox.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'Gemini AIでレシート画像を解析中...';
-        if (pctEl) pctEl.textContent = '50%';
-        if (barEl) barEl.style.width = '50%';
-
-        const canvas = buildEnhancedCanvasFromImage(imgEl, false);
-        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.88);
-        const base64Data = jpegDataUrl.split(',')[1];
+        const imageParts = [];
+        for (const dataUrl of imagesToSend) {
+          const base64Data = await dataUrlToCompressedJpegBase64(dataUrl);
+          imageParts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: base64Data
+            }
+          });
+        }
 
         const categoryListText = buildCategoryHierarchyPromptText();
-        const promptText = `あなたは日本の家計簿アシスタントです。添付されたレシート画像を正確に読み取り、購入日・購入先店舗名・支払方法（読み取れる場合）・購入商品リストを抽出してください。
-また、各商品について以下のカテゴリー一覧から最も適切な majorId, mediumId, minorId を選択してください。割引・値引行がある場合は直前の商品金額から差し引くか、実支払額ベースで整理してください。小計・合計・消費税（外税の合計欄）・お釣りは商品リストに含めないでください。
+        const promptText = `あなたは日本の家計簿アシスタントです。添付された複数枚の画像は、1枚の長いレシートを上から下へ分割撮影したものです（重なり部分がある場合は重複商品を除いて統合してください）。
+全画像を通して購入日・購入先店舗名・支払方法（読み取れる場合）・購入商品リストを漏れなく抽出し、各商品について以下のカテゴリー一覧から最も適切な majorId, mediumId, minorId を選択してください。割引・値引行がある場合はマイナス金額（例: -50）の明細として抽出するか実支払額ベースで整理し、小計・合計・消費税合計欄・お釣りは商品リストに含めないでください。
 
 【利用可能なカテゴリー一覧】
 ${categoryListText}`;
 
-        const payload = {
-          contents: [
-            {
-              role: 'user',
+        const { data, modelUsed } = await callGeminiWithFallback(
+          apiKey,
+          {
+            contents: [{
+              parts: [
+                { text: promptText },
+                ...imageParts
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                  date: { type: 'STRING' },
+                  store: { type: 'STRING' },
+                  payment: { type: 'STRING' },
+                  items: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        name: { type: 'STRING' },
+                        price: { type: 'INTEGER' },
+                        majorId: { type: 'STRING' },
+                        mediumId: { type: 'STRING' },
+                        minorId: { type: 'STRING' }
+                      },
+                      required: ['name', 'price', 'majorId', 'mediumId', 'minorId']
+                    }
+                  }
+                },
+                required: ['date', 'store', 'payment', 'items']
+              }
+            }
+          },
+          (m) => {
+            statusText.textContent = `分割画像(${imagesToSend.length}枚)をAI解析中 (${m})...`;
+            percentText.textContent = '75%';
+            progressBar.style.width = '75%';
+          }
+        );
+
+        const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const parsed = JSON.parse(rawJsonText);
+
+        percentText.textContent = '100%';
+        progressBar.style.width = '100%';
+        statusText.textContent = `AI一括解析完了！(${modelUsed})`;
+
+        applyParsedReceiptJsonToForm(parsed, modelUsed);
+        queuedReceiptDataUrls = [];
+        renderReceiptQueueUI();
+      } catch (err) {
+        console.error('Gemini Multi-Receipt Error:', err);
+        statusText.textContent = 'AI一括解析エラー';
+        if (errDetailBox) {
+          errDetailBox.textContent = `詳細エラー: ${err.message}`;
+          errDetailBox.classList.remove('hidden');
+        }
+        showToast('複数画像のAI解析に失敗しました。エラー詳細を確認してください', 'error');
+      } finally {
+        if (aiBtn) aiBtn.disabled = false;
+      }
+    }
+
+    async function runGeminiReceiptAnalysis() {
+      const apiKey = getSavedGeminiApiKey();
+      if (!apiKey) {
+        showToast('先に「APIキー・モデル設定」からGemini APIキーを登録してください', 'error');
+        openAiKeySettingsFromEntry();
+        return;
+      }
+
+      const img = document.getElementById('receipt-preview-img');
+      if (!img.src) {
+        showToast('先にレシート画像を撮影または選択してください', 'error');
+        return;
+      }
+
+      const aiBtn = document.getElementById('run-ai-ocr-btn');
+      const progressBox = document.getElementById('ocr-progress-box');
+      const statusText = document.getElementById('ocr-status-text');
+      const percentText = document.getElementById('ocr-percent-text');
+      const progressBar = document.getElementById('ocr-progress-bar');
+      const errDetailBox = document.getElementById('ai-error-detail-box');
+
+      aiBtn.disabled = true;
+      if (errDetailBox) {
+        errDetailBox.classList.add('hidden');
+        errDetailBox.textContent = '';
+      }
+      progressBox.classList.remove('hidden');
+      statusText.textContent = 'Gemini AIへレシート画像を送信中...';
+      percentText.textContent = '35%';
+      progressBar.style.width = '35%';
+
+      try {
+        const base64Data = await imageElementToJpegBase64(img);
+        const categoryListText = buildCategoryHierarchyPromptText();
+
+        const promptText = `あなたは日本の家計簿アシスタントです。添付されたレシート画像を正確に読み取り、購入日・購入先店舗名・支払方法（読み取れる場合）・購入商品リストを抽出してください。
+また、各商品について以下のカテゴリー一覧から最も適切な majorId, mediumId, minorId を選択してください。割引・値引行がある場合はマイナス金額（例: -50）の明細として抽出するか、直前の商品金額から差し引いて実支払額ベースで整理してください。小計・合計・消費税（外税の合計欄）・お釣りは商品リストに含めないでください。
+
+【利用可能なカテゴリー一覧】
+${categoryListText}`;
+
+        const { data, modelUsed } = await callGeminiWithFallback(
+          apiKey,
+          {
+            contents: [{
               parts: [
                 { text: promptText },
                 {
@@ -2394,146 +2375,115 @@ ${categoryListText}`;
                   }
                 }
               ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                date: { type: 'STRING', description: 'YYYY-MM-DD形式の購入日。不明な場合は空文字' },
-                store: { type: 'STRING', description: '店舗名・購入先' },
-                payment: { type: 'STRING', description: '支払方法（現金、クレジットカード、PayPayなど）。不明なら空文字' },
-                items: {
-                  type: 'ARRAY',
+            }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                  date: { type: 'STRING' },
+                  store: { type: 'STRING' },
+                  payment: { type: 'STRING' },
                   items: {
-                    type: 'OBJECT',
-                    properties: {
-                      name: { type: 'STRING', description: 'わかりやすい商品名' },
-                      price: { type: 'INTEGER', description: '税込または支払金額（整数・円）' },
-                      majorId: { type: 'STRING' },
-                      mediumId: { type: 'STRING' },
-                      minorId: { type: 'STRING' }
-                    },
-                    required: ['name', 'price', 'majorId', 'mediumId', 'minorId']
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        name: { type: 'STRING' },
+                        price: { type: 'INTEGER' },
+                        majorId: { type: 'STRING' },
+                        mediumId: { type: 'STRING' },
+                        minorId: { type: 'STRING' }
+                      },
+                      required: ['name', 'price', 'majorId', 'mediumId', 'minorId']
+                    }
                   }
-                }
-              },
-              required: ['date', 'store', 'items']
+                },
+                required: ['date', 'store', 'payment', 'items']
+              }
             }
+          },
+          (m) => {
+            statusText.textContent = `AI解析中 (${m})...`;
+            percentText.textContent = '70%';
+            progressBar.style.width = '70%';
           }
-        };
+        );
 
-        const preferredModel = getGeminiModel();
-        const { data: result, usedModel } = await callGeminiWithFallback(apiKey, payload, preferredModel);
+        const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const parsed = JSON.parse(rawJsonText);
 
-        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) throw new Error('AIから有効な応答テキストが返りませんでした');
+        percentText.textContent = '100%';
+        progressBar.style.width = '100%';
+        statusText.textContent = `AI解析完了！(${modelUsed})`;
 
-        const cleanedJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-        const parsed = JSON.parse(cleanedJson);
-
-        if (pctEl) pctEl.textContent = '100%';
-        if (barEl) barEl.style.width = '100%';
-        if (statusEl) statusEl.textContent = `AI解析完了 (${usedModel})`;
-
-        const validDate = sanitizeDate(parsed.date);
-        if (validDate) document.getElementById('form-date').value = validDate;
-
-        const cleanStore = sanitizeText(parsed.store, 80);
-        if (cleanStore) document.getElementById('form-store').value = cleanStore;
-
-        if (parsed.payment) {
-          const matchedPay = appState.payments.find((p) => parsed.payment.includes(p) || p.includes(parsed.payment));
-          if (matchedPay) document.getElementById('form-payment').value = matchedPay;
-        }
-
-        const items = Array.isArray(parsed.items) ? parsed.items : [];
-        if (items.length === 0) {
-          showToast('AIで商品明細を検出できませんでした', 'warning');
-          return;
-        }
-
-        const hasExistingItems =
-          document.getElementById('item-rows-container').children.length > 1 ||
-          Boolean((document.getElementById('item-rows-container').children[0]?.querySelector('input[data-field="name"]')?.value || '').trim());
-        const addedCount = applyParsedReceiptResultToForm(parsed, usedModel, hasExistingItems);
-        showToast(`Gemini AI (${usedModel}) が${addedCount}点の商品を解析・反映しました`, 'success');
+        applyParsedReceiptJsonToForm(parsed, modelUsed);
       } catch (err) {
-        console.error('Gemini解析エラー:', err);
-        if (progBox) progBox.classList.add('hidden');
-        if (errBox) {
-          errBox.textContent = `詳細エラー: ${err.message}`;
-          errBox.classList.remove('hidden');
+        console.error('Gemini OCR Error:', err);
+        statusText.textContent = 'AI解析エラー';
+        if (errDetailBox) {
+          errDetailBox.textContent = `詳細エラー: ${err.message}`;
+          errDetailBox.classList.remove('hidden');
         }
-        showToast('Gemini AI解析に失敗しました。詳細エラーを確認してください。', 'error');
+        showToast('Gemini AI解析に失敗しました。下の詳細エラーを確認してください', 'error');
       } finally {
-        if (aiBtn) aiBtn.disabled = false;
+        aiBtn.disabled = false;
       }
     }
 
     function insertSampleReceiptText() {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      document.getElementById('receipt-raw-text').value = `${yyyy}/${mm}/${dd} ライフ 駅前店\n国産豚こま切れ 540\nキャベツ 198\n特濃牛乳 218`;
+      const today = getTodayDateStr().replace(/-/g, '/');
+      document.getElementById('receipt-raw-text').value = `${today} イオン 駅前店\n国産若鶏もも肉 580\nトマト 298\n食パン 168`;
     }
 
     function guessCategoryByItemName(itemName) {
-      const lower = itemName.toLowerCase();
+      const name = itemName.toLowerCase();
       const rules = [
-        { keywords: ['牛乳', '卵', 'チーズ', 'ヨーグルト', 'パン'], maj: 'maj_food', med: 'med_grocery', min: 'min_dairy' },
-        { keywords: ['肉', '豚', '牛', '鶏', '魚', '鮭'], maj: 'maj_food', med: 'med_grocery', min: 'min_meat' },
-        { keywords: ['野菜', 'キャベツ', 'トマト', 'ねぎ', 'りんご'], maj: 'maj_food', med: 'med_grocery', min: 'min_veggie' },
-        { keywords: ['コーヒー', 'カフェ', 'ケーキ', 'ラテ'], maj: 'maj_food', med: 'med_eating_out', min: 'min_cafe' },
-        { keywords: ['洗剤', '柔軟剤', 'スポンジ'], maj: 'maj_daily', med: 'med_household', min: 'min_detergent' },
-        { keywords: ['ティッシュ', 'トイレットペーパー'], maj: 'maj_daily', med: 'med_household', min: 'min_paper' }
+        { keywords: ['キャベツ', 'トマト', '野菜', '果物', 'バナナ', 'りんご'], majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_veg' },
+        { keywords: ['豚', '鶏', '牛', '肉', '鮭', '刺身', '魚'], majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_meat_fish' },
+        { keywords: ['牛乳', '卵', '豆腐', '納豆', 'ヨーグルト'], majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_dairy_egg' },
+        { keywords: ['米', 'パン', 'うどん', 'パスタ'], majorId: 'cat_food', mediumId: 'med_groceries', minorId: 'min_staple' },
+        { keywords: ['ティッシュ', 'ペーパー'], majorId: 'cat_daily', mediumId: 'med_consumables', minorId: 'min_paper' },
+        { keywords: ['洗剤', 'シャンプー', '石鹸'], majorId: 'cat_daily', mediumId: 'med_consumables', minorId: 'min_kitchen_bath' }
       ];
       for (const r of rules) {
-        if (r.keywords.some((k) => lower.includes(k))) return { majorId: r.maj, mediumId: r.med, minorId: r.min };
+        if (r.keywords.some((kw) => name.includes(kw)) && appState.categories.some((c) => c.id === r.majorId)) {
+          return { majorId: r.majorId, mediumId: r.mediumId, minorId: r.minorId };
+        }
       }
-      return {
-        majorId: appState.categories[0]?.id || '',
-        mediumId: appState.categories[0]?.mediums[0]?.id || '',
-        minorId: appState.categories[0]?.mediums[0]?.minors[0]?.id || ''
-      };
+      const defMaj = appState.categories[0];
+      return { majorId: defMaj?.id || '', mediumId: defMaj?.mediums[0]?.id || '', minorId: defMaj?.mediums[0]?.minors[0]?.id || '' };
     }
 
-    function parseReceiptTextToForm(overrideText = null) {
-      const raw = overrideText !== null ? overrideText : (document.getElementById('receipt-raw-text')?.value || '');
+    function parseReceiptTextToForm() {
+      const raw = document.getElementById('receipt-raw-text').value || '';
       const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       if (lines.length === 0) {
-        showToast('解析するテキストを入力してください', 'warning');
+        showToast('テキストを入力してください', 'error');
         return;
       }
 
-      for (const line of lines) {
-        const m = line.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
-        if (m) {
-          document.getElementById('form-date').value = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
-          break;
-        }
+      const dateMatch = raw.match(/(20\d{2})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+      if (dateMatch) {
+        const parsedDate = `${dateMatch[1]}-${String(dateMatch[2]).padStart(2, '0')}-${String(dateMatch[3]).padStart(2, '0')}`;
+        if (sanitizeDate(parsedDate)) document.getElementById('form-date').value = parsedDate;
       }
 
-      let foundStore = '';
-      for (const line of lines.slice(0, 4)) {
-        for (const s of appState.stores) {
-          if (line.includes(s)) { foundStore = s; break; }
-        }
-        if (foundStore) break;
-      }
-      if (foundStore) document.getElementById('form-store').value = foundStore;
+      const knownStore = appState.stores.find((s) => raw.includes(s));
+      if (knownStore) document.getElementById('form-store').value = knownStore;
+      else if (lines[0] && !/\d{3,}/.test(lines[0])) document.getElementById('form-store').value = lines[0].slice(0, 40);
 
       const parsedItems = [];
       const skipWords = ['合計', '小計', '消費税', '外税', '内税', 'お預り', 'お釣り', 'ポイント'];
       for (const line of lines) {
         if (skipWords.some((w) => line.includes(w))) continue;
         if (/^\d{4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}日?$/.test(line)) continue;
-        const priceMatch = line.match(/[¥￥]?\s*([\d,]{1,8})\s*円?\s*$/);
+        const priceMatch = line.match(/([\-−▲△]?)\s*[¥￥]?\s*([\d,]{1,8})\s*円?\s*$/);
         if (!priceMatch) continue;
-        const price = Number(priceMatch[1].replace(/,/g, ''));
-        if (!Number.isFinite(price) || price <= 0) continue;
+        const isMinus = Boolean(priceMatch[1]);
+        const absPrice = Number(priceMatch[2].replace(/,/g, ''));
+        if (!Number.isFinite(absPrice) || absPrice <= 0) continue;
+        const price = isMinus ? -absPrice : absPrice;
         const namePart = line.slice(0, priceMatch.index).replace(/[¥￥]/g, '').trim();
         if (!namePart) continue;
         const cats = guessCategoryByItemName(namePart);
@@ -2541,336 +2491,350 @@ ${categoryListText}`;
       }
 
       if (parsedItems.length === 0) {
-        showToast('商品名と金額を検出できませんでした', 'warning');
+        showToast('商品名と金額を抽出できませんでした', 'error');
         return;
       }
 
       const container = document.getElementById('item-rows-container');
       container.innerHTML = '';
       for (const itm of parsedItems) addItemRow(itm);
-      updateFormTotal();
-      showToast(`${parsedItems.length}件の商品を明細へ反映しました`, 'success');
+      showToast(`${parsedItems.length}点の明細を反映しました`);
     }
 
     // =========================================================================
-    // 9. マスタ管理画面
+    // 6. マスタ管理画面 & ホーム画面ショートカットアイコン生成
     // =========================================================================
-    function initMasterView() {
-      if (!masterSelectedMajorId && appState.categories.length > 0) {
-        masterSelectedMajorId = appState.categories[0].id;
+    function switchMasterTab(tab) {
+      for (const t of ['categories', 'stores', 'payments', 'ai', 'icon']) {
+        document.getElementById(`master-pane-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`m-tab-${t}`).classList.toggle('tab-pill-active', t === tab);
       }
-      const maj = appState.categories.find((c) => c.id === masterSelectedMajorId) || appState.categories[0];
-      if (maj) {
-        masterSelectedMajorId = maj.id;
-        if (!masterSelectedMediumId || !maj.mediums.some((m) => m.id === masterSelectedMediumId)) {
-          masterSelectedMediumId = maj.mediums[0]?.id || null;
-        }
+      if (tab === 'ai') {
+        loadGeminiKeyToInput();
       }
+    }
+
+    function renderAllMasterViews() {
       renderMasterCategories();
       renderMasterStores();
       renderMasterPayments();
     }
 
-    function switchMasterTab(tabName) {
-      ['categories', 'stores', 'payments', 'ai', 'icon'].forEach((t) => {
-        const btn = document.getElementById(`m-tab-${t}`);
-        const pane = document.getElementById(`master-pane-${t}`);
-        if (btn) btn.classList.toggle('tab-pill-active', t === tabName);
-        if (pane) pane.classList.toggle('hidden', t !== tabName);
-      });
-      if (tabName === 'categories') renderMasterCategories();
-      if (tabName === 'stores') renderMasterStores();
-      if (tabName === 'payments') renderMasterPayments();
-      if (tabName === 'ai') updateGeminiKeyStatusUI();
-    }
-
     function renderMasterCategories() {
-      const majList = document.getElementById('master-major-list');
-      const medList = document.getElementById('master-medium-list');
-      const minList = document.getElementById('master-minor-list');
-
-      majList.innerHTML = appState.categories.map((maj) => {
-        const active = maj.id === masterSelectedMajorId;
-        return `
-          <div data-action="select-major" data-id="${escapeAttr(maj.id)}" class="px-3 py-2 rounded-xl flex items-center justify-between gap-2 ${active ? 'bg-brand-50 border border-brand-300 text-brand-800 font-bold' : 'bg-slate-50 text-slate-700'}">
-            <span class="text-xs truncate">${escapeHtml(maj.name)}</span>
-            <div class="flex items-center gap-1 shrink-0">
-              <button type="button" data-action="rename-cat" data-level="major" data-id="${escapeAttr(maj.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
-              <button type="button" data-action="delete-cat" data-level="major" data-id="${escapeAttr(maj.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
-            </div>
-          </div>`;
-      }).join('');
-
-      const selectedMaj = appState.categories.find((c) => c.id === masterSelectedMajorId);
-      document.getElementById('selected-major-label').textContent = selectedMaj ? `(${selectedMaj.name})` : '';
-      if (!selectedMaj) return;
-
-      if (!selectedMaj.mediums.some((m) => m.id === masterSelectedMediumId)) {
-        masterSelectedMediumId = selectedMaj.mediums[0]?.id || null;
+      if (!appState.categories.some((c) => c.id === selectedMasterMajorId)) {
+        selectedMasterMajorId = appState.categories[0]?.id || '';
       }
+      const currentMajor = appState.categories.find((c) => c.id === selectedMasterMajorId);
+      if (currentMajor && !currentMajor.mediums.some((m) => m.id === selectedMasterMediumId)) {
+        selectedMasterMediumId = currentMajor.mediums[0]?.id || '';
+      }
+      const currentMedium = currentMajor?.mediums.find((m) => m.id === selectedMasterMediumId);
 
-      medList.innerHTML = selectedMaj.mediums.map((med) => {
-        const active = med.id === masterSelectedMediumId;
+      document.getElementById('selected-major-label').textContent = currentMajor ? `(${currentMajor.name})` : '';
+      document.getElementById('selected-medium-label').textContent = currentMedium ? `(${currentMedium.name})` : '';
+
+      document.getElementById('master-major-list').innerHTML = appState.categories.map((c) => {
+        const active = c.id === selectedMasterMajorId;
         return `
-          <div data-action="select-medium" data-id="${escapeAttr(med.id)}" class="px-3 py-2 rounded-xl flex items-center justify-between gap-2 ${active ? 'bg-brand-50 border border-brand-300 text-brand-800 font-bold' : 'bg-slate-50 text-slate-700'}">
-            <span class="text-xs truncate">${escapeHtml(med.name)}</span>
-            <div class="flex items-center gap-1 shrink-0">
-              <button type="button" data-action="rename-cat" data-level="medium" data-id="${escapeAttr(med.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
-              <button type="button" data-action="delete-cat" data-level="medium" data-id="${escapeAttr(med.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs ${active ? 'bg-brand-50 text-brand-700 font-bold border border-brand-200' : 'bg-slate-50 text-slate-700'}" data-action="select-master-major" data-id="${escapeAttr(c.id)}">
+            <span class="truncate flex-1">${escapeHtml(c.name)}</span>
+            <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+              <button type="button" data-action="rename-major" data-id="${escapeAttr(c.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" data-action="delete-major" data-id="${escapeAttr(c.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash"></i></button>
             </div>
           </div>`;
       }).join('');
 
-      const selectedMed = selectedMaj.mediums.find((m) => m.id === masterSelectedMediumId);
-      document.getElementById('selected-medium-label').textContent = selectedMed ? `(${selectedMed.name})` : '';
-      if (!selectedMed) { minList.innerHTML = ''; return; }
+      document.getElementById('master-medium-list').innerHTML = currentMajor ? currentMajor.mediums.map((m) => {
+        const active = m.id === selectedMasterMediumId;
+        return `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs ${active ? 'bg-brand-50 text-brand-700 font-bold border border-brand-200' : 'bg-slate-50 text-slate-700'}" data-action="select-master-medium" data-id="${escapeAttr(m.id)}">
+            <span class="truncate flex-1">${escapeHtml(m.name)}</span>
+            <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+              <button type="button" data-action="rename-medium" data-id="${escapeAttr(m.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" data-action="delete-medium" data-id="${escapeAttr(m.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>`;
+      }).join('') : '';
 
-      minList.innerHTML = selectedMed.minors.map((min) => `
-        <div class="px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-slate-50 text-slate-700">
-          <span class="text-xs truncate">${escapeHtml(min.name)}</span>
-          <div class="flex items-center gap-1 shrink-0">
-            <button type="button" data-action="rename-cat" data-level="minor" data-id="${escapeAttr(min.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
-            <button type="button" data-action="delete-cat" data-level="minor" data-id="${escapeAttr(min.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+      document.getElementById('master-minor-list').innerHTML = currentMedium ? currentMedium.minors.map((n) => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs bg-slate-50 text-slate-700">
+          <span class="truncate flex-1">${escapeHtml(n.name)}</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" data-action="rename-minor" data-id="${escapeAttr(n.id)}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" data-action="delete-minor" data-id="${escapeAttr(n.id)}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash"></i></button>
           </div>
-        </div>`).join('');
+        </div>`).join('') : '';
     }
 
     function addMajorCategory() {
       const input = document.getElementById('new-major-name');
-      const name = sanitizeText(input?.value, 60);
+      const name = sanitizeText(input.value, 50);
       if (!name) return;
-      const newMaj = { id: uid('maj'), name, mediums: [{ id: uid('med'), name: '一般', minors: [{ id: uid('min'), name: 'その他' }] }] };
+      const newMaj = { id: uid('cat'), name, mediums: [{ id: uid('med'), name: '一般', minors: [{ id: uid('min'), name: 'その他' }] }] };
       appState.categories.push(newMaj);
-      masterSelectedMajorId = newMaj.id;
-      masterSelectedMediumId = newMaj.mediums[0].id;
+      selectedMasterMajorId = newMaj.id;
+      selectedMasterMediumId = newMaj.mediums[0].id;
       input.value = '';
-      saveState();
+      saveAppState();
       renderMasterCategories();
-      populateMasterSelects();
-      showToast('大分類を追加しました', 'success');
+      showToast(`大分類「${name}」を追加しました`);
     }
 
     function addMediumCategory() {
-      const maj = appState.categories.find((c) => c.id === masterSelectedMajorId);
+      const currentMajor = appState.categories.find((c) => c.id === selectedMasterMajorId);
+      if (!currentMajor) return;
       const input = document.getElementById('new-medium-name');
-      const name = sanitizeText(input?.value, 60);
-      if (!maj || !name) return;
+      const name = sanitizeText(input.value, 50);
+      if (!name) return;
       const newMed = { id: uid('med'), name, minors: [{ id: uid('min'), name: 'その他' }] };
-      maj.mediums.push(newMed);
-      masterSelectedMediumId = newMed.id;
+      currentMajor.mediums.push(newMed);
+      selectedMasterMediumId = newMed.id;
       input.value = '';
-      saveState();
+      saveAppState();
       renderMasterCategories();
-      populateMasterSelects();
-      showToast('中分類を追加しました', 'success');
+      showToast(`中分類「${name}」を追加しました`);
     }
 
     function addMinorCategory() {
-      const maj = appState.categories.find((c) => c.id === masterSelectedMajorId);
-      const med = maj?.mediums.find((m) => m.id === masterSelectedMediumId);
+      const currentMajor = appState.categories.find((c) => c.id === selectedMasterMajorId);
+      const currentMedium = currentMajor?.mediums.find((m) => m.id === selectedMasterMediumId);
+      if (!currentMedium) return;
       const input = document.getElementById('new-minor-name');
-      const name = sanitizeText(input?.value, 60);
-      if (!med || !name) return;
-      med.minors.push({ id: uid('min'), name });
+      const name = sanitizeText(input.value, 50);
+      if (!name) return;
+      currentMedium.minors.push({ id: uid('min'), name });
       input.value = '';
-      saveState();
+      saveAppState();
       renderMasterCategories();
-      populateMasterSelects();
-      showToast('小分類を追加しました', 'success');
-    }
-
-    async function renameCategory(level, id) {
-      let target = null;
-      if (level === 'major') target = appState.categories.find((c) => c.id === id);
-      else if (level === 'medium') target = appState.categories.find((c) => c.id === masterSelectedMajorId)?.mediums.find((m) => m.id === id);
-      else if (level === 'minor') target = appState.categories.find((c) => c.id === masterSelectedMajorId)?.mediums.find((m) => m.id === masterSelectedMediumId)?.minors.find((s) => s.id === id);
-      if (!target) return;
-      const next = await showPromptModal('分類名の変更', target.name);
-      if (!next) return;
-      target.name = sanitizeText(next, 60, target.name);
-      saveState();
-      renderMasterCategories();
-      populateMasterSelects();
-    }
-
-    async function deleteCategory(level, id) {
-      if (level === 'major') {
-        if (appState.categories.length <= 1) return;
-        if (!(await showConfirm('大分類の削除', 'この大分類を削除しますか？', '削除する'))) return;
-        appState.categories = appState.categories.filter((c) => c.id !== id);
-        masterSelectedMajorId = appState.categories[0]?.id || null;
-      } else if (level === 'medium') {
-        const maj = appState.categories.find((c) => c.id === masterSelectedMajorId);
-        if (!maj || !(await showConfirm('中分類の削除', 'この中分類を削除しますか？', '削除する'))) return;
-        maj.mediums = maj.mediums.filter((m) => m.id !== id);
-        masterSelectedMediumId = maj.mediums[0]?.id || null;
-      } else if (level === 'minor') {
-        const med = appState.categories.find((c) => c.id === masterSelectedMajorId)?.mediums.find((m) => m.id === masterSelectedMediumId);
-        if (!med || !(await showConfirm('小分類の削除', 'この小分類を削除しますか？', '削除する'))) return;
-        med.minors = med.minors.filter((s) => s.id !== id);
-      }
-      saveState();
-      renderMasterCategories();
-      populateMasterSelects();
+      showToast(`小分類「${name}」を追加しました`);
     }
 
     function renderMasterStores() {
-      const el = document.getElementById('master-store-list');
-      el.innerHTML = appState.stores.map((s, idx) => `
-        <div class="py-2.5 flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-800">${escapeHtml(s)}</span>
-          <div class="flex gap-1.5">
-            <button type="button" data-action="rename-store" data-idx="${idx}" class="px-2.5 py-1 text-[11px] font-bold text-brand-600 bg-brand-50 rounded-lg">変更</button>
-            <button type="button" data-action="delete-store" data-idx="${idx}" class="px-2.5 py-1 text-[11px] font-bold text-rose-600 bg-rose-50 rounded-lg">削除</button>
+      document.getElementById('master-store-list').innerHTML = appState.stores.map((s, idx) => `
+        <div class="py-2.5 flex items-center justify-between text-xs">
+          <span class="font-medium text-slate-800">${escapeHtml(s)}</span>
+          <div class="flex items-center gap-2">
+            <button type="button" data-action="rename-store" data-idx="${idx}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" data-action="delete-store" data-idx="${idx}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>`).join('');
     }
 
     function addStoreMaster() {
       const input = document.getElementById('new-store-name');
-      const name = sanitizeText(input?.value, 80);
+      const name = sanitizeText(input.value, 80);
       if (!name) return;
       if (!appState.stores.includes(name)) appState.stores.unshift(name);
       input.value = '';
-      saveState();
+      saveAppState();
+      syncFormMasterOptions();
       renderMasterStores();
-      populateMasterSelects();
-    }
-
-    async function renameStoreMaster(idx) {
-      const cur = appState.stores[idx];
-      if (!cur) return;
-      const next = await showPromptModal('購入先名の変更', cur);
-      if (!next) return;
-      appState.stores[idx] = sanitizeText(next, 80, cur);
-      saveState();
-      renderMasterStores();
-      populateMasterSelects();
-    }
-
-    async function deleteStoreMaster(idx) {
-      if (!(await showConfirm('購入先の削除', 'この購入先を削除しますか？', '削除する'))) return;
-      appState.stores.splice(idx, 1);
-      saveState();
-      renderMasterStores();
-      populateMasterSelects();
+      showToast(`購入先「${name}」を追加しました`);
     }
 
     function renderMasterPayments() {
-      const el = document.getElementById('master-payment-list');
-      el.innerHTML = appState.payments.map((p, idx) => `
-        <div class="py-2.5 flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-800">${escapeHtml(p)}</span>
-          <div class="flex gap-1.5">
-            <button type="button" data-action="rename-payment" data-idx="${idx}" class="px-2.5 py-1 text-[11px] font-bold text-brand-600 bg-brand-50 rounded-lg">変更</button>
-            <button type="button" data-action="delete-payment" data-idx="${idx}" class="px-2.5 py-1 text-[11px] font-bold text-rose-600 bg-rose-50 rounded-lg">削除</button>
+      document.getElementById('master-payment-list').innerHTML = appState.payments.map((p, idx) => `
+        <div class="py-2.5 flex items-center justify-between text-xs">
+          <span class="font-medium text-slate-800">${escapeHtml(p)}</span>
+          <div class="flex items-center gap-2">
+            <button type="button" data-action="rename-payment" data-idx="${idx}" class="p-1.5 text-slate-500"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" data-action="delete-payment" data-idx="${idx}" class="p-1.5 text-rose-500"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>`).join('');
     }
 
     function addPaymentMaster() {
       const input = document.getElementById('new-payment-name');
-      const name = sanitizeText(input?.value, 60);
+      const name = sanitizeText(input.value, 60);
       if (!name) return;
       if (!appState.payments.includes(name)) appState.payments.push(name);
       input.value = '';
-      saveState();
+      saveAppState();
+      syncFormMasterOptions();
       renderMasterPayments();
-      populateMasterSelects();
-    }
-
-    async function renamePaymentMaster(idx) {
-      const cur = appState.payments[idx];
-      if (!cur) return;
-      const next = await showPromptModal('支払方法名の変更', cur);
-      if (!next) return;
-      appState.payments[idx] = sanitizeText(next, 60, cur);
-      saveState();
-      renderMasterPayments();
-      populateMasterSelects();
-    }
-
-    async function deletePaymentMaster(idx) {
-      if (appState.payments.length <= 1) return;
-      if (!(await showConfirm('支払方法の削除', 'この支払方法を削除しますか？', '削除する'))) return;
-      appState.payments.splice(idx, 1);
-      saveState();
-      renderMasterPayments();
-      populateMasterSelects();
+      showToast(`支払方法「${name}」を追加しました`);
     }
 
     async function quickAddMaster(type) {
+      const label = type === 'stores' ? '新しい購入先（店舗名）' : '新しい支払方法';
+      const val = await showPrompt(label, '');
+      const sanitized = sanitizeText(val || '', 60);
+      if (!sanitized) return;
       if (type === 'stores') {
-        const name = await showPromptModal('新しい購入先を追加');
-        if (!name) return;
-        const clean = sanitizeText(name, 80);
-        if (!appState.stores.includes(clean)) appState.stores.unshift(clean);
-        saveState();
-        populateMasterSelects();
-        document.getElementById('form-store').value = clean;
-      } else if (type === 'payments') {
-        const name = await showPromptModal('新しい支払方法を追加');
-        if (!name) return;
-        const clean = sanitizeText(name, 60);
-        if (!appState.payments.includes(clean)) appState.payments.push(clean);
-        saveState();
-        populateMasterSelects();
-        document.getElementById('form-payment').value = clean;
+        if (!appState.stores.includes(sanitized)) appState.stores.unshift(sanitized);
+        saveAppState();
+        syncFormMasterOptions();
+        document.getElementById('form-store').value = sanitized;
+      } else {
+        if (!appState.payments.includes(sanitized)) appState.payments.push(sanitized);
+        saveAppState();
+        syncFormMasterOptions();
+        document.getElementById('form-payment').value = sanitized;
+      }
+      showToast(`「${sanitized}」を追加しました`);
+    }
+
+    // カスタムアイコン生成・適用
+    let currentIconConfig = { bg: '#2563eb', emoji: '👛', customDataUrl: '' };
+
+    function loadIconConfig() {
+      try {
+        const raw = localStorage.getItem(ICON_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            currentIconConfig = { ...currentIconConfig, ...parsed };
+          }
+        }
+      } catch (e) {
+        console.error(e);
       }
     }
 
-    // =========================================================================
-    // 10. データ管理（CSV出力・JSON入出力・初期化）
-    // =========================================================================
-    function exportCSV() {
-      const rows = [['購入日', '購入先', '支払方法', '大分類', '中分類', '小分類', '商品名', '金額', 'メモ']];
-      for (const rec of appState.receipts) {
-        for (const itm of rec.items || []) {
-          const names = findCategoryNames(itm.majorId, itm.mediumId, itm.minorId);
-          rows.push([rec.date, rec.store, rec.payment, names.majorName, names.mediumName, names.minorName, itm.name, Number(itm.price) || 0, rec.memo || '']);
-        }
+    function saveIconConfig() {
+      try {
+        localStorage.setItem(ICON_STORAGE_KEY, JSON.stringify(currentIconConfig));
+      } catch (e) {
+        console.error(e);
       }
-      const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
-      const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csv], { type: 'text/csv;charset=utf-8;' });
+    }
+
+    function generatePresetIconDataUrl(bg, emoji) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      const grad = ctx.createLinearGradient(0, 0, 512, 512);
+      grad.addColorStop(0, bg);
+      grad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.font = '250px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emoji, 256, 270);
+      return canvas.toDataURL('image/png');
+    }
+
+    function applyAppIcon(dataUrl) {
+      const appleLink = document.getElementById('apple-touch-icon-link');
+      const favLink = document.getElementById('favicon-link');
+      const headerImg = document.getElementById('header-app-icon-img');
+      const settingsImg = document.getElementById('icon-settings-preview');
+      const manifestLink = document.getElementById('web-manifest-link');
+
+      if (appleLink) appleLink.href = dataUrl;
+      if (favLink) favLink.href = dataUrl;
+      if (headerImg) headerImg.src = dataUrl;
+      if (settingsImg) settingsImg.src = dataUrl;
+
+      if (manifestLink) {
+        const manifest = {
+          name: 'スマート家計簿 Pro Mobile',
+          short_name: 'スマート家計簿',
+          start_url: '.',
+          display: 'standalone',
+          background_color: '#f1f5f9',
+          theme_color: currentIconConfig.bg || '#2563eb',
+          icons: [{ src: dataUrl, sizes: '512x512', type: 'image/png' }]
+        };
+        const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        manifestLink.href = URL.createObjectURL(blob);
+      }
+    }
+
+    function updatePresetAppIcon(partial) {
+      currentIconConfig = { ...currentIconConfig, ...partial, customDataUrl: '' };
+      saveIconConfig();
+      const url = generatePresetIconDataUrl(currentIconConfig.bg, currentIconConfig.emoji);
+      applyAppIcon(url);
+      showToast('ホーム画面アイコンのデザインを更新しました');
+    }
+
+    function handleCustomAppIconUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext('2d');
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, 512, 512);
+          const pngUrl = canvas.toDataURL('image/png');
+          currentIconConfig.customDataUrl = pngUrl;
+          saveIconConfig();
+          applyAppIcon(pngUrl);
+          showToast('カスタム画像をアイコンに設定しました');
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // =========================================================================
+    // 7. CSV / JSON 入出力・メニュー開閉・イベント委譲
+    // =========================================================================
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `kakeibo_mobile_${currentMonth || 'all'}.csv`;
+      a.download = filename;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-      showToast('CSVをダウンロードしました', 'success');
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function csvCell(val) {
+      return `"${String(val ?? '').replace(/"/g, '""')}"`;
+    }
+
+    function exportCSV() {
+      const headers = ['購入日', '購入先', '支払方法', '商品名', '大分類', '中分類', '小分類', '金額', 'メモ'];
+      const rows = [headers.map(csvCell).join(',')];
+      const sorted = [...appState.receipts].sort((a, b) => a.date.localeCompare(b.date));
+      for (const rec of sorted) {
+        for (const itm of rec.items || []) {
+          const names = findCategoryNames(itm.majorId, itm.mediumId, itm.minorId);
+          rows.push([rec.date, rec.store, rec.payment, itm.name, names.majorName, names.mediumName, names.minorName, itm.price, rec.memo || ''].map(csvCell).join(','));
+        }
+      }
+      downloadFile('\uFEFF' + rows.join('\r\n'), `kakeibo_${getTodayDateStr()}.csv`, 'text/csv;charset=utf-8;');
+      showToast('CSVを出力しました');
     }
 
     function exportJSON() {
-      const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `kakeibo_backup_${currentMonth || 'data'}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('JSONバックアップを保存しました', 'success');
+      downloadFile(JSON.stringify(appState, null, 2), `kakeibo_backup_${getTodayDateStr()}.json`, 'application/json');
+      showToast('バックアップ(JSON)を保存しました');
     }
 
     function importJSON(event) {
-      const file = event.target?.files?.[0];
+      const file = event.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = async () => {
         try {
-          const clean = sanitizeImportedState(JSON.parse(e.target.result));
-          if (!clean) {
-            showToast('有効なJSONデータではありません', 'error');
-            return;
-          }
-          if (!(await showConfirm('バックアップの復元', '現在のデータを上書きして復元しますか？', '復元する'))) return;
-          appState = clean;
-          saveState();
+          const sanitized = sanitizeAppState(JSON.parse(reader.result));
+          const ok = await showConfirm('バックアップ復元', `レシート ${sanitized.receipts.length}件で上書き復元しますか？`);
+          if (!ok) return;
+          appState = sanitized;
+          saveAppState();
+          syncFormMasterOptions();
           resetReceiptForm();
-          renderAll();
-          showToast('復元しました', 'success');
-        } catch {
-          showToast('JSONの読み込みに失敗しました', 'error');
+          refreshDashboard();
+          showToast('データを復元しました');
+        } catch (e) {
+          showToast('JSONファイルの形式が正しくありません', 'error');
         } finally {
           event.target.value = '';
         }
@@ -2879,27 +2843,26 @@ ${categoryListText}`;
     }
 
     async function resetToSampleData() {
-      if (!(await showConfirm('サンプル再投入', '初期サンプルデータに戻しますか？', '再投入する'))) return;
+      const ok = await showConfirm('サンプルデータ再投入', '現在のデータをサンプルデータで初期化しますか？');
+      if (!ok) return;
       appState = createDefaultData();
-      saveState();
-      setTodayMonth();
+      saveAppState();
+      syncFormMasterOptions();
       resetReceiptForm();
-      showToast('サンプルデータを再投入しました', 'success');
+      refreshDashboard();
+      showToast('サンプルデータを再投入しました');
     }
 
     async function clearAllData() {
-      if (!(await showConfirm('全データ初期化', '購入履歴をすべて削除しますか？', '初期化する'))) return;
-      const base = createDefaultData();
-      appState = { categories: base.categories, stores: base.stores, payments: base.payments, receipts: [] };
-      saveState();
+      const ok = await showConfirm('全データ初期化', '登録済みの購入履歴をすべて削除しますか？');
+      if (!ok) return;
+      appState.receipts = [];
+      saveAppState();
       resetReceiptForm();
-      renderAll();
-      showToast('履歴を初期化しました', 'success');
+      refreshDashboard();
+      showToast('履歴を初期化しました');
     }
 
-    // =========================================================================
-    // 11. イベント委譲＆起動処理
-    // =========================================================================
     function toggleDataMenu(event) {
       if (event) event.stopPropagation();
       document.getElementById('data-menu-dropdown')?.classList.toggle('hidden');
@@ -2909,45 +2872,144 @@ ${categoryListText}`;
       document.getElementById('data-menu-dropdown')?.classList.add('hidden');
     }
 
-    function setupDelegatedEvents() {
-      document.addEventListener('click', (e) => {
-        const menuContainer = document.getElementById('data-menu-container');
-        if (menuContainer && !menuContainer.contains(e.target)) closeDataMenu();
+    document.addEventListener('click', async (e) => {
+      const menuContainer = document.getElementById('data-menu-container');
+      if (menuContainer && !menuContainer.contains(e.target)) closeDataMenu();
 
-        const target = e.target.closest('[data-action]');
-        if (!target) return;
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
 
-        const action = target.dataset.action;
-        if (action === 'toggle-node') toggleCategoryNode(target.dataset.key);
-        else if (action === 'edit-receipt') editReceipt(target.dataset.id);
-        else if (action === 'delete-receipt') deleteReceipt(target.dataset.id);
-        else if (action === 'remove-row') removeItemRow(target.dataset.rowId);
-        else if (action === 'remove-queued-img') { e.stopPropagation(); removeQueuedReceiptImage(Number(target.dataset.idx)); }
-        else if (action === 'select-major') {
-          masterSelectedMajorId = target.dataset.id;
-          const maj = appState.categories.find((c) => c.id === masterSelectedMajorId);
-          masterSelectedMediumId = maj?.mediums[0]?.id || null;
+      if (action === 'toggle-node') {
+        const key = target.dataset.key;
+        if (expandedNodes.has(key)) expandedNodes.delete(key);
+        else expandedNodes.add(key);
+        refreshDashboard();
+      } else if (action === 'edit-receipt') {
+        startEditReceipt(target.dataset.id);
+      } else if (action === 'delete-receipt') {
+        deleteReceipt(target.dataset.id);
+      } else if (action === 'remove-row') {
+        removeItemRow(target.dataset.rowId);
+      } else if (action === 'select-master-major') {
+        selectedMasterMajorId = target.dataset.id;
+        const maj = appState.categories.find((c) => c.id === selectedMasterMajorId);
+        selectedMasterMediumId = maj?.mediums[0]?.id || '';
+        renderMasterCategories();
+      } else if (action === 'select-master-medium') {
+        selectedMasterMediumId = target.dataset.id;
+        renderMasterCategories();
+      } else if (action === 'rename-major') {
+        const maj = appState.categories.find((c) => c.id === target.dataset.id);
+        if (!maj) return;
+        const next = await showPrompt('大分類の名称変更', maj.name);
+        if (next) {
+          maj.name = sanitizeText(next, 50, maj.name);
+          saveAppState();
           renderMasterCategories();
-        } else if (action === 'select-medium') {
-          masterSelectedMediumId = target.dataset.id;
+        }
+      } else if (action === 'delete-major') {
+        if (appState.categories.length <= 1) {
+          showToast('大分類は最低1つ必要です', 'error');
+          return;
+        }
+        const ok = await showConfirm('大分類の削除', 'この大分類を削除しますか？');
+        if (!ok) return;
+        appState.categories = appState.categories.filter((c) => c.id !== target.dataset.id);
+        saveAppState();
+        renderMasterCategories();
+      } else if (action === 'rename-medium') {
+        const maj = appState.categories.find((c) => c.id === selectedMasterMajorId);
+        const med = maj?.mediums.find((m) => m.id === target.dataset.id);
+        if (!med) return;
+        const next = await showPrompt('中分類の名称変更', med.name);
+        if (next) {
+          med.name = sanitizeText(next, 50, med.name);
+          saveAppState();
           renderMasterCategories();
-        } else if (action === 'rename-cat') { e.stopPropagation(); renameCategory(target.dataset.level, target.dataset.id); }
-        else if (action === 'delete-cat') { e.stopPropagation(); deleteCategory(target.dataset.level, target.dataset.id); }
-        else if (action === 'rename-store') renameStoreMaster(Number(target.dataset.idx));
-        else if (action === 'delete-store') deleteStoreMaster(Number(target.dataset.idx));
-        else if (action === 'rename-payment') renamePaymentMaster(Number(target.dataset.idx));
-        else if (action === 'delete-payment') deletePaymentMaster(Number(target.dataset.idx));
-      });
-    }
+        }
+      } else if (action === 'delete-medium') {
+        const maj = appState.categories.find((c) => c.id === selectedMasterMajorId);
+        if (!maj || maj.mediums.length <= 1) {
+          showToast('中分類は最低1つ必要です', 'error');
+          return;
+        }
+        const ok = await showConfirm('中分類の削除', 'この中分類を削除しますか？');
+        if (!ok) return;
+        maj.mediums = maj.mediums.filter((m) => m.id !== target.dataset.id);
+        saveAppState();
+        renderMasterCategories();
+      } else if (action === 'rename-minor') {
+        const maj = appState.categories.find((c) => c.id === selectedMasterMajorId);
+        const med = maj?.mediums.find((m) => m.id === selectedMasterMediumId);
+        const min = med?.minors.find((n) => n.id === target.dataset.id);
+        if (!min) return;
+        const next = await showPrompt('小分類の名称変更', min.name);
+        if (next) {
+          min.name = sanitizeText(next, 50, min.name);
+          saveAppState();
+          renderMasterCategories();
+        }
+      } else if (action === 'delete-minor') {
+        const maj = appState.categories.find((c) => c.id === selectedMasterMajorId);
+        const med = maj?.mediums.find((m) => m.id === selectedMasterMediumId);
+        if (!med || med.minors.length <= 1) {
+          showToast('小分類は最低1つ必要です', 'error');
+          return;
+        }
+        med.minors = med.minors.filter((n) => n.id !== target.dataset.id);
+        saveAppState();
+        renderMasterCategories();
+      } else if (action === 'rename-store') {
+        const idx = Number(target.dataset.idx);
+        const cur = appState.stores[idx];
+        if (!cur) return;
+        const next = await showPrompt('購入先名の変更', cur);
+        if (next) {
+          appState.stores[idx] = sanitizeText(next, 80, cur);
+          saveAppState();
+          syncFormMasterOptions();
+          renderMasterStores();
+        }
+      } else if (action === 'delete-store') {
+        appState.stores.splice(Number(target.dataset.idx), 1);
+        saveAppState();
+        syncFormMasterOptions();
+        renderMasterStores();
+      } else if (action === 'rename-payment') {
+        const idx = Number(target.dataset.idx);
+        const cur = appState.payments[idx];
+        if (!cur) return;
+        const next = await showPrompt('支払方法名の変更', cur);
+        if (next) {
+          appState.payments[idx] = sanitizeText(next, 60, cur);
+          saveAppState();
+          syncFormMasterOptions();
+          renderMasterPayments();
+        }
+      } else if (action === 'delete-payment') {
+        if (appState.payments.length <= 1) {
+          showToast('支払方法は最低1つ必要です', 'error');
+          return;
+        }
+        appState.payments.splice(Number(target.dataset.idx), 1);
+        saveAppState();
+        syncFormMasterOptions();
+        renderMasterPayments();
+      }
+    });
 
-    window.addEventListener('DOMContentLoaded', () => {
-      initAppIcon();
-      loadState();
-      updateGeminiKeyStatusUI();
-      setupDelegatedEvents();
-      setTodayMonth();
+    document.addEventListener('DOMContentLoaded', () => {
+      loadIconConfig();
+      const initialIconUrl = currentIconConfig.customDataUrl || generatePresetIconDataUrl(currentIconConfig.bg, currentIconConfig.emoji);
+      applyAppIcon(initialIconUrl);
+
+      document.getElementById('current-month-picker').value = currentMonth;
+      if (appState.categories[0]) expandedNodes.add(`maj:${appState.categories[0].id}`);
+      syncFormMasterOptions();
       resetReceiptForm();
-      switchMobileView('summary');
+      refreshDashboard();
+      updateGeminiKeyBadge();
     });
   </script>
 </body>
