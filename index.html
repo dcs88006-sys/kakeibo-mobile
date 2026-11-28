@@ -517,15 +517,15 @@
         <div class="space-y-1.5">
           <label class="block text-[11px] font-bold text-slate-700">使用モデル（APIキーの契約ティアに合わせて選択）</label>
           <select id="gemini-model-select" onchange="onGeminiModelSelectChange()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white">
-            <option value="auto">自動選択（無料枠・有料枠を自動判定して接続 / おすすめ）</option>
+            <option value="auto">自動選択（最新モデル・無料枠を自動判定して接続 / おすすめ）</option>
+            <option value="gemini-3.8-flash">gemini-3.8-flash（最新推奨・高速）</option>
             <option value="gemini-4-hydrogen">gemini-4-hydrogen（Gemini 4 軽量・高速）</option>
             <option value="gemini-4-neon">gemini-4-neon（Gemini 4 バランス型）</option>
             <option value="gemini-4-carbon">gemini-4-carbon（Gemini 4 高精度推論）</option>
             <option value="gemini-3-flash-preview">gemini-3-flash-preview（Gemini 3 Flash）</option>
-            <option value="gemini-2.5-flash">gemini-2.5-flash（Gemini 2.5 Flash）</option>
             <option value="custom">カスタムモデル名を直接入力...</option>
           </select>
-          <input type="text" id="gemini-custom-model-input" placeholder="例: gemini-4-hydrogen" class="hidden w-full px-3 py-2 text-xs border border-slate-300 rounded-xl font-mono">
+          <input type="text" id="gemini-custom-model-input" placeholder="例: gemini-3.8-flash" class="hidden w-full px-3 py-2 text-xs border border-slate-300 rounded-xl font-mono">
         </div>
         <div id="ai-test-result-box" class="hidden rounded-xl p-2.5 text-[11px]"></div>
         <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -629,9 +629,10 @@
     const GEMINI_MODEL_STORAGE = 'smart_kakeibo_gemini_model_v1';
     const DEFAULT_GEMINI_MODEL = 'auto';
     const FALLBACK_MODELS = [
+      'gemini-3.8-flash',
       'gemini-4-hydrogen',
-      'gemini-3-flash-preview',
-      'gemini-2.5-flash'
+      'gemini-4-neon',
+      'gemini-3-flash-preview'
     ];
     const ICON_STORAGE_KEY = 'smart_kakeibo_custom_icon_v1';
     const MAX_STRING_LEN = 120;
