@@ -1859,6 +1859,40 @@
       showToast('分割ストックをクリアしました', 'info');
     }
 
+    async function startReceiptCamera(deviceId = null) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('このブラウザまたは環境ではカメラ起動がサポートされていません（HTTPS環境が必要です）', 'error');
+        return;
+      }
+
+      stopReceiptCamera();
+      const boxEl = document.getElementById('camera-capture-box');
+      const videoEl = document.getElementById('camera-video');
+      const switchBtn = document.getElementById('switch-camera-btn');
+
+      try {
+        const constraints = deviceId
+          ? { video: { deviceId: { exact: deviceId } }, audio: false }
+          : { video: { facingMode: { ideal: cameraFacingMode }, width: { ideal: 1280 }, height: { ideal: 1920 } }, audio: false };
+
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (videoEl) {
+          videoEl.srcObject = cameraStream;
+          await videoEl.play().catch(() => {});
+        }
+        if (boxEl) boxEl.classList.remove('hidden');
+
+        if (navigator.mediaDevices.enumerateDevices) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          availableVideoDevices = devices.filter((d) => d.kind === 'videoinput');
+          if (switchBtn) switchBtn.classList.toggle('hidden', availableVideoDevices.length <= 1);
+        }
+      } catch (err) {
+        console.error('カメラ起動エラー:', err);
+        showToast('カメラを起動できませんでした。ブラウザのカメラ権限とHTTPS接続をご確認ください。', 'error');
+      }
+    }
+
     function applyParsedReceiptResultToForm(parsed, usedModel, appendMode = false) {
       const validDate = sanitizeDate(parsed.date);
       if (validDate) document.getElementById('form-date').value = validDate;
